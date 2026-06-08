@@ -1,0 +1,17 @@
+# docker-compose para subir a API com persistência do SQLite em volume.
+# Uso: docker compose up --build
+services:
+  api:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+      DATABASE_URL: "file:/data/chamados.db?_pragma=foreign_keys(1)"
+      JWT_SECRET: "${JWT_SECRET:-dev-secret-change-me}"
+    volumes:
+      - chamados-data:/data
+    restart: unless-stopped
+
+volumes:
+  chamados-data:

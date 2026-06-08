@@ -1,0 +1,33 @@
+# Git
+.git
+.gitignore
+
+# CI
+.github
+
+# Docs
+*.md
+docs/
+
+# Ambiente local
+.env
+.env.local
+*.db
+*.sqlite
+*.sqlite3
+
+# Build artifacts
+bin/
+dist/
+
+# Testes / coverage
+coverage/
+*.coverprofile
+
+# Frontend (build separado, fora desta imagem)
+frontend/node_modules/
+frontend/dist/
+
+# IDE
+.vscode/
+.idea/
