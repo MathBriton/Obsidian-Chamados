@@ -101,6 +101,19 @@ curl http://localhost:8080/healthz
 | `GET`  | `/me` | Bearer | Retorna o usuário autenticado |
 | `GET`  | `/healthz` | — | Liveness probe |
 
+### Categorias e Tickets
+
+| Método | Rota | Auth | Descrição |
+|---|---|---|---|
+| `GET`  | `/categories` | Bearer | Lista as categorias do tenant |
+| `POST` | `/categories` | Bearer (admin) | Cria uma categoria |
+| `POST` | `/tickets` | Bearer | Abre um ticket (qualquer papel) |
+| `GET`  | `/tickets` | Bearer | Lista tickets (`?limit=&offset=`) |
+| `GET`  | `/tickets/:id` | Bearer | Detalha um ticket |
+| `PATCH`| `/tickets/:id` | Bearer | Atualização parcial |
+
+**Autorização (RBAC):** `customer` cria e vê/edita apenas os próprios tickets (e só `title`/`description`); `agent`/`admin` veem e editam todos do tenant, incluindo `status`, `priority`, `category_id` e `assigned_to`. Ticket de outro tenant ou de outro customer responde **404** (não revela existência — ADR-003). Transições para `resolved`/`closed` carimbam `resolved_at`/`closed_at`.
+
 Exemplo de fluxo:
 
 ```bash

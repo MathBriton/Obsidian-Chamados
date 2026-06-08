@@ -44,6 +44,24 @@ func RequireAuth(tokens *auth.TokenManager) gin.HandlerFunc {
 	}
 }
 
+// RequireRole exige que o usuário autenticado tenha um dos papéis informados.
+// Deve ser encadeado após RequireAuth. Responde 403 caso contrário.
+func RequireRole(roles ...string) gin.HandlerFunc {
+	allowed := make(map[string]bool, len(roles))
+	for _, r := range roles {
+		allowed[r] = true
+	}
+	return func(c *gin.Context) {
+		if !allowed[Role(c)] {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+				"error": gin.H{"code": "forbidden", "message": "acesso negado para o seu papel"},
+			})
+			return
+		}
+		c.Next()
+	}
+}
+
 // UserID retorna o id do usuário autenticado; 0 se ausente.
 func UserID(c *gin.Context) int64 { return int64Value(c, ctxUserID) }
 

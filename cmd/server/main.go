@@ -42,7 +42,9 @@ func run() error {
 	store := repositories.NewStore(db)
 	tokens := auth.NewTokenManager(cfg.JWTSecret, cfg.AccessTokenTTL)
 	authService := services.NewAuthService(store, tokens, cfg.RefreshTokenTTL)
-	router := handlers.New(authService, tokens).Router()
+	categoryService := services.NewCategoryService(store)
+	ticketService := services.NewTicketService(store)
+	router := handlers.New(authService, categoryService, ticketService, tokens).Router()
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,

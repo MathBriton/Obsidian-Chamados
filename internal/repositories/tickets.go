@@ -1,0 +1,88 @@
+package repositories
+
+import (
+	"context"
+
+	"github.com/MathBriton/Obsidian-Chamados/internal/db"
+)
+
+// TicketRepository dá acesso à tabela tickets, escopada por tenant_id (ADR-001).
+type TicketRepository struct {
+	q db.Querier
+}
+
+// CreateTicketInput agrega os dados para abrir um ticket. status e priority já
+// chegam validados/normalizados pela camada de service.
+type CreateTicketInput struct {
+	TenantID    int64
+	Title       string
+	Description string
+	Status      string
+	Priority    string
+	CategoryID  int64
+	CreatedBy   int64
+}
+
+// Create abre um ticket no tenant.
+func (r *TicketRepository) Create(ctx context.Context, in CreateTicketInput) (db.Ticket, error) {
+	return r.q.CreateTicket(ctx, db.CreateTicketParams{
+		TenantID:    in.TenantID,
+		Title:       in.Title,
+		Description: in.Description,
+		Status:      in.Status,
+		Priority:    in.Priority,
+		CategoryID:  in.CategoryID,
+		CreatedBy:   in.CreatedBy,
+	})
+}
+
+// GetByID busca um ticket pelo id dentro do tenant.
+func (r *TicketRepository) GetByID(ctx context.Context, tenantID, id int64) (db.Ticket, error) {
+	ticket, err := r.q.GetTicketByID(ctx, db.GetTicketByIDParams{TenantID: tenantID, ID: id})
+	if err != nil {
+		return db.Ticket{}, notFound(err)
+	}
+	return ticket, nil
+}
+
+// ListByTenant lista todos os tickets do tenant, paginado (visão de agent/admin).
+func (r *TicketRepository) ListByTenant(ctx context.Context, tenantID, limit, offset int64) ([]db.Ticket, error) {
+	return r.q.ListTicketsByTenant(ctx, db.ListTicketsByTenantParams{
+		TenantID: tenantID,
+		Limit:    limit,
+		Offset:   offset,
+	})
+}
+
+// ListByCreator lista os tickets criados por um usuário no tenant, paginado
+// (visão de customer).
+func (r *TicketRepository) ListByCreator(ctx context.Context, tenantID, createdBy, limit, offset int64) ([]db.Ticket, error) {
+	return r.q.ListTicketsByCreator(ctx, db.ListTicketsByCreatorParams{
+		TenantID:  tenantID,
+		CreatedBy: createdBy,
+		Limit:     limit,
+		Offset:    offset,
+	})
+}
+
+// Update persiste o ticket inteiro (read-modify-write feito no service). O
+// filtro por tenant_id garante o isolamento mesmo no UPDATE.
+func (r *TicketRepository) Update(ctx context.Context, t db.Ticket) (db.Ticket, error) {
+	updated, err := r.q.UpdateTicket(ctx, db.UpdateTicketParams{
+		Title:          t.Title,
+		Description:    t.Description,
+		Status:         t.Status,
+		Priority:       t.Priority,
+		CategoryID:     t.CategoryID,
+		AssignedTo:     t.AssignedTo,
+		AssignedTeamID: t.AssignedTeamID,
+		ResolvedAt:     t.ResolvedAt,
+		ClosedAt:       t.ClosedAt,
+		TenantID:       t.TenantID,
+		ID:             t.ID,
+	})
+	if err != nil {
+		return db.Ticket{}, notFound(err)
+	}
+	return updated, nil
+}

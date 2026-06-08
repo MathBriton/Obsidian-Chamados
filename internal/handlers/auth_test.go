@@ -28,7 +28,9 @@ func newRouter(t *testing.T) *gin.Engine {
 	store := repositories.NewStore(testdb.New(t))
 	tokens := auth.NewTokenManager("test-secret", 15*time.Minute)
 	svc := services.NewAuthService(store, tokens, 7*24*time.Hour)
-	return handlers.New(svc, tokens).Router()
+	cats := services.NewCategoryService(store)
+	tickets := services.NewTicketService(store)
+	return handlers.New(svc, cats, tickets, tokens).Router()
 }
 
 // do envia uma requisição JSON e devolve o response recorder.

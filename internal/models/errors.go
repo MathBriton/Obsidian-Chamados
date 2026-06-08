@@ -13,4 +13,7 @@ var (
 	ErrEmailTaken         = errors.New("email já em uso")
 	ErrInactiveUser       = errors.New("usuário inativo")
 	ErrForbidden          = errors.New("acesso negado")
+	ErrCategoryTaken      = errors.New("categoria já existe")
+	ErrInvalidCategory    = errors.New("categoria inválida")
+	ErrInvalidAssignee    = errors.New("responsável inválido")
 )

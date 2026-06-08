@@ -9,18 +9,26 @@ import (
 )
 
 type Querier interface {
+	CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
 	CreateTenant(ctx context.Context, arg CreateTenantParams) (Tenant, error)
+	CreateTicket(ctx context.Context, arg CreateTicketParams) (Ticket, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeactivateUser(ctx context.Context, arg DeactivateUserParams) error
+	GetCategoryByID(ctx context.Context, arg GetCategoryByIDParams) (Category, error)
 	GetRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
 	GetTenantByID(ctx context.Context, id int64) (Tenant, error)
 	GetTenantBySlug(ctx context.Context, slug string) (Tenant, error)
+	GetTicketByID(ctx context.Context, arg GetTicketByIDParams) (Ticket, error)
 	GetUserByEmail(ctx context.Context, arg GetUserByEmailParams) (User, error)
 	GetUserByID(ctx context.Context, arg GetUserByIDParams) (User, error)
+	ListCategoriesByTenant(ctx context.Context, tenantID int64) ([]Category, error)
+	ListTicketsByCreator(ctx context.Context, arg ListTicketsByCreatorParams) ([]Ticket, error)
+	ListTicketsByTenant(ctx context.Context, arg ListTicketsByTenantParams) ([]Ticket, error)
 	ListUsersByTenant(ctx context.Context, arg ListUsersByTenantParams) ([]User, error)
 	RevokeAllUserTokens(ctx context.Context, arg RevokeAllUserTokensParams) error
 	RevokeRefreshToken(ctx context.Context, tokenHash string) error
+	UpdateTicket(ctx context.Context, arg UpdateTicketParams) (Ticket, error)
 }
 
 var _ Querier = (*Queries)(nil)
