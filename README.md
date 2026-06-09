@@ -159,6 +159,25 @@ go test -cover ./...       # com cobertura
 
 Testes de integração usam SQLite em memória (RNF10) — não tocam o banco real.
 
+## Frontend (`web/`)
+
+SPA em **React + TypeScript + Tailwind CSS v4**, com Vite, React Router e Vitest. Por enquanto cobre a autenticação (login, registro, sessão persistida e logout) consumindo a API.
+
+```bash
+cd web
+cp .env.example .env   # opcional em dev (usa o proxy do Vite)
+npm install
+npm run dev            # http://localhost:5173
+```
+
+Em desenvolvimento, o Vite faz **proxy** das rotas da API (`/auth`, `/me`, `/tickets`, `/categories`) para `http://localhost:8080`, então basta ter o backend rodando em paralelo — sem CORS. Em produção, defina `VITE_API_URL` apontando para a API.
+
+```bash
+npm test               # Vitest + React Testing Library
+npm run build          # build de produção (tsc + vite)
+npm run lint           # ESLint
+```
+
 ## Docker (produção)
 
 Imagem multi-stage com runtime **distroless non-root**:
