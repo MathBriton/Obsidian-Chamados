@@ -20,6 +20,16 @@ import (
 	"github.com/MathBriton/Obsidian-Chamados/internal/services"
 )
 
+// @title           Obsidian Chamados API
+// @version         0.3.0
+// @description     SaaS multi-tenant de gestão de chamados (help desk / service desk).
+// @description     Autenticação via Bearer JWT: obtenha o access_token em /auth/register ou /auth/login e informe-o em "Authorize".
+// @BasePath        /
+//
+// @securityDefinitions.apikey  Bearer
+// @in                          header
+// @name                        Authorization
+// @description                 Informe o token no formato: Bearer {access_token}
 func main() {
 	if err := run(); err != nil {
 		log.Fatalf("server: %v", err)

@@ -23,6 +23,18 @@ func toCategoryResponse(c db.Category) categoryResponse {
 }
 
 // CreateCategory cria uma categoria no tenant (rota restrita a admin).
+//
+// @Summary   Cria uma categoria (admin)
+// @Tags      categories
+// @Accept    json
+// @Produce   json
+// @Security  Bearer
+// @Param     body  body      createCategoryRequest  true  "Nome da categoria"
+// @Success   201   {object}  categoryResponse
+// @Failure   400   {object}  errorEnvelope
+// @Failure   403   {object}  errorEnvelope
+// @Failure   409   {object}  errorEnvelope
+// @Router    /categories [post]
 func (h *Handler) CreateCategory(c *gin.Context) {
 	var req createCategoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -39,6 +51,14 @@ func (h *Handler) CreateCategory(c *gin.Context) {
 }
 
 // ListCategories lista as categorias do tenant (qualquer papel autenticado).
+//
+// @Summary   Lista as categorias do tenant
+// @Tags      categories
+// @Produce   json
+// @Security  Bearer
+// @Success   200  {object}  categoryListResponse
+// @Failure   401  {object}  errorEnvelope
+// @Router    /categories [get]
 func (h *Handler) ListCategories(c *gin.Context) {
 	cats, err := h.categories.List(c.Request.Context(), middleware.TenantID(c))
 	if err != nil {

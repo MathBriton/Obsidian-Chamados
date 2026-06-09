@@ -4,7 +4,10 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 
+	_ "github.com/MathBriton/Obsidian-Chamados/docs" // docs gerados pelo swag (Swagger UI)
 	"github.com/MathBriton/Obsidian-Chamados/internal/auth"
 	"github.com/MathBriton/Obsidian-Chamados/internal/middleware"
 	"github.com/MathBriton/Obsidian-Chamados/internal/services"
@@ -40,6 +43,9 @@ func (h *Handler) Router() *gin.Engine {
 
 	r.GET("/healthz", h.health)
 
+	// Documentação interativa (Swagger UI) em /swagger/index.html.
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	authGroup := r.Group("/auth")
 	{
 		authGroup.POST("/register", h.Register)
@@ -61,6 +67,9 @@ func (h *Handler) Router() *gin.Engine {
 		api.GET("/tickets", h.ListTickets)
 		api.GET("/tickets/:id", h.GetTicket)
 		api.PATCH("/tickets/:id", h.UpdateTicket)
+
+		api.POST("/tickets/:id/comments", h.CreateComment)
+		api.GET("/tickets/:id/comments", h.ListComments)
 	}
 
 	return r

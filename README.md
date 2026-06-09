@@ -111,6 +111,8 @@ curl http://localhost:8080/healthz
 | `GET`  | `/tickets` | Bearer | Lista tickets (`?limit=&offset=`) |
 | `GET`  | `/tickets/:id` | Bearer | Detalha um ticket |
 | `PATCH`| `/tickets/:id` | Bearer | Atualização parcial |
+| `POST` | `/tickets/:id/comments` | Bearer | Comenta no ticket (`is_internal` só staff) |
+| `GET`  | `/tickets/:id/comments` | Bearer | Lista comentários (customer não vê notas internas) |
 
 **Autorização (RBAC):** `customer` cria e vê/edita apenas os próprios tickets (e só `title`/`description`); `agent`/`admin` veem e editam todos do tenant, incluindo `status`, `priority`, `category_id` e `assigned_to`. Ticket de outro tenant ou de outro customer responde **404** (não revela existência — ADR-003). Transições para `resolved`/`closed` carimbam `resolved_at`/`closed_at`.
 
@@ -127,6 +129,25 @@ curl http://localhost:8080/me -H "Authorization: Bearer <ACCESS_TOKEN>"
 ```
 
 Erros seguem o formato `{"error":{"code":"...","message":"..."}}` com códigos estáveis (RNF13), ex.: `invalid_credentials`, `slug_taken`, `invalid_token`.
+
+## Documentação interativa (Swagger)
+
+Com o servidor rodando, a Swagger UI fica disponível em:
+
+```
+http://localhost:8080/swagger/index.html
+```
+
+É possível testar todos os endpoints pelo navegador. Para rotas autenticadas, clique em **Authorize** e informe `Bearer <access_token>` (obtido em `/auth/register` ou `/auth/login`).
+
+A documentação é gerada por anotações [swaggo](https://github.com/swaggo/swag) nos handlers. Para regenerar após mudanças na API:
+
+```bash
+go install github.com/swaggo/swag/cmd/swag@latest
+swag init -g cmd/server/main.go -o docs --parseInternal --parseDependency
+```
+
+O pacote `docs/` é versionado, então o servidor e a imagem Docker não dependem do `swag` em runtime.
 
 ## Testes
 

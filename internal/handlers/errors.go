@@ -14,8 +14,13 @@ import (
 // errorBody é o corpo padronizado de erro da API. O campo Code é estável e
 // destinado a clientes; Message é legível para humanos (RNF13).
 type errorBody struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
+	Code    string `json:"code" example:"invalid_credentials"`
+	Message string `json:"message" example:"credenciais inválidas"`
+}
+
+// errorEnvelope documenta, para o Swagger, o formato de erro {"error": {...}}.
+type errorEnvelope struct {
+	Error errorBody `json:"error"`
 }
 
 // respondError escreve um erro no formato {"error": {code, message}}.

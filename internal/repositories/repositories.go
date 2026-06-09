@@ -14,6 +14,7 @@ type Repositories struct {
 	Tokens     *RefreshTokenRepository
 	Categories *CategoryRepository
 	Tickets    *TicketRepository
+	Comments   *CommentRepository
 }
 
 // New monta os repositórios sobre um db.Querier (pool ou transação).
@@ -24,5 +25,6 @@ func New(q db.Querier) *Repositories {
 		Tokens:     &RefreshTokenRepository{q: q},
 		Categories: &CategoryRepository{q: q},
 		Tickets:    &TicketRepository{q: q},
+		Comments:   &CommentRepository{q: q},
 	}
 }

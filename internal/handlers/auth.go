@@ -74,6 +74,16 @@ func toAuthResponse(r services.AuthResult) authResponse {
 // ---------------------------------------------------------------------------
 
 // Register cria um tenant e seu usuário admin, devolvendo o par de tokens.
+//
+// @Summary  Registra um novo tenant e seu usuário admin
+// @Tags     auth
+// @Accept   json
+// @Produce  json
+// @Param    body  body      registerRequest  true  "Dados do registro"
+// @Success  201   {object}  authResponse
+// @Failure  400   {object}  errorEnvelope
+// @Failure  409   {object}  errorEnvelope
+// @Router   /auth/register [post]
 func (h *Handler) Register(c *gin.Context) {
 	var req registerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -96,6 +106,16 @@ func (h *Handler) Register(c *gin.Context) {
 }
 
 // Login autentica um usuário dentro do tenant identificado pelo slug.
+//
+// @Summary  Autentica um usuário (por slug do tenant)
+// @Tags     auth
+// @Accept   json
+// @Produce  json
+// @Param    body  body      loginRequest  true  "Credenciais"
+// @Success  200   {object}  authResponse
+// @Failure  400   {object}  errorEnvelope
+// @Failure  401   {object}  errorEnvelope
+// @Router   /auth/login [post]
 func (h *Handler) Login(c *gin.Context) {
 	var req loginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -112,6 +132,16 @@ func (h *Handler) Login(c *gin.Context) {
 }
 
 // Refresh rotaciona o refresh token e emite um novo par.
+//
+// @Summary  Rotaciona o refresh token e emite novo par
+// @Tags     auth
+// @Accept   json
+// @Produce  json
+// @Param    body  body      refreshRequest  true  "Refresh token"
+// @Success  200   {object}  authResponse
+// @Failure  400   {object}  errorEnvelope
+// @Failure  401   {object}  errorEnvelope
+// @Router   /auth/refresh [post]
 func (h *Handler) Refresh(c *gin.Context) {
 	var req refreshRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -129,6 +159,14 @@ func (h *Handler) Refresh(c *gin.Context) {
 
 // Logout revoga o refresh token informado. Idempotente: responde 204 mesmo se
 // o token já estava revogado ou não existe.
+//
+// @Summary  Revoga um refresh token (logout)
+// @Tags     auth
+// @Accept   json
+// @Param    body  body  refreshRequest  true  "Refresh token"
+// @Success  204   "Sem conteúdo"
+// @Failure  400   {object}  errorEnvelope
+// @Router   /auth/logout [post]
 func (h *Handler) Logout(c *gin.Context) {
 	var req refreshRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -144,6 +182,14 @@ func (h *Handler) Logout(c *gin.Context) {
 }
 
 // Me devolve o usuário autenticado, identificado pelos claims do access token.
+//
+// @Summary   Usuário autenticado
+// @Tags      auth
+// @Produce   json
+// @Security  Bearer
+// @Success   200  {object}  meResponse
+// @Failure   401  {object}  errorEnvelope
+// @Router    /me [get]
 func (h *Handler) Me(c *gin.Context) {
 	user, err := h.auth.CurrentUser(c.Request.Context(), middleware.TenantID(c), middleware.UserID(c))
 	if err != nil {

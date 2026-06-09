@@ -1,0 +1,611 @@
+basePath: /
+definitions:
+  internal_handlers.authResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+      tenant:
+        $ref: '#/definitions/internal_handlers.tenantResponse'
+      user:
+        $ref: '#/definitions/internal_handlers.userResponse'
+    type: object
+  internal_handlers.categoryListResponse:
+    properties:
+      categories:
+        items:
+          $ref: '#/definitions/internal_handlers.categoryResponse'
+        type: array
+    type: object
+  internal_handlers.categoryResponse:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  internal_handlers.commentListResponse:
+    properties:
+      comments:
+        items:
+          $ref: '#/definitions/internal_handlers.commentResponse'
+        type: array
+    type: object
+  internal_handlers.commentResponse:
+    properties:
+      author_id:
+        type: integer
+      body:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      is_internal:
+        type: boolean
+      ticket_id:
+        type: integer
+    type: object
+  internal_handlers.createCategoryRequest:
+    properties:
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  internal_handlers.createCommentRequest:
+    properties:
+      body:
+        minLength: 1
+        type: string
+      is_internal:
+        type: boolean
+    required:
+    - body
+    type: object
+  internal_handlers.createTicketRequest:
+    properties:
+      category_id:
+        type: integer
+      description:
+        type: string
+      priority:
+        enum:
+        - low
+        - medium
+        - high
+        - critical
+        type: string
+      title:
+        type: string
+    required:
+    - category_id
+    - description
+    - title
+    type: object
+  internal_handlers.errorBody:
+    properties:
+      code:
+        example: invalid_credentials
+        type: string
+      message:
+        example: credenciais inválidas
+        type: string
+    type: object
+  internal_handlers.errorEnvelope:
+    properties:
+      error:
+        $ref: '#/definitions/internal_handlers.errorBody'
+    type: object
+  internal_handlers.loginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+      slug:
+        type: string
+    required:
+    - email
+    - password
+    - slug
+    type: object
+  internal_handlers.meResponse:
+    properties:
+      user:
+        $ref: '#/definitions/internal_handlers.userResponse'
+    type: object
+  internal_handlers.refreshRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  internal_handlers.registerRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        minLength: 8
+        type: string
+      slug:
+        type: string
+      tenant_name:
+        type: string
+    required:
+    - email
+    - name
+    - password
+    - slug
+    - tenant_name
+    type: object
+  internal_handlers.tenantResponse:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+      slug:
+        type: string
+    type: object
+  internal_handlers.ticketListResponse:
+    properties:
+      tickets:
+        items:
+          $ref: '#/definitions/internal_handlers.ticketResponse'
+        type: array
+    type: object
+  internal_handlers.ticketResponse:
+    properties:
+      assigned_team_id:
+        type: integer
+      assigned_to:
+        type: integer
+      category_id:
+        type: integer
+      closed_at:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: integer
+      description:
+        type: string
+      id:
+        type: integer
+      priority:
+        type: string
+      resolved_at:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  internal_handlers.updateTicketRequest:
+    properties:
+      assigned_to:
+        type: integer
+      category_id:
+        type: integer
+      description:
+        minLength: 1
+        type: string
+      priority:
+        enum:
+        - low
+        - medium
+        - high
+        - critical
+        type: string
+      status:
+        enum:
+        - open
+        - in_progress
+        - waiting_customer
+        - resolved
+        - closed
+        type: string
+      title:
+        minLength: 1
+        type: string
+    type: object
+  internal_handlers.userResponse:
+    properties:
+      email:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      role:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: |-
+    SaaS multi-tenant de gestão de chamados (help desk / service desk).
+    Autenticação via Bearer JWT: obtenha o access_token em /auth/register ou /auth/login e informe-o em "Authorize".
+  title: Obsidian Chamados API
+  version: 0.3.0
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Credenciais
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.loginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handlers.authResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      summary: Autentica um usuário (por slug do tenant)
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Refresh token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.refreshRequest'
+      responses:
+        "204":
+          description: Sem conteúdo
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      summary: Revoga um refresh token (logout)
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Refresh token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.refreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handlers.authResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      summary: Rotaciona o refresh token e emite novo par
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados do registro
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.registerRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_handlers.authResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      summary: Registra um novo tenant e seu usuário admin
+      tags:
+      - auth
+  /categories:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handlers.categoryListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      security:
+      - Bearer: []
+      summary: Lista as categorias do tenant
+      tags:
+      - categories
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Nome da categoria
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.createCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_handlers.categoryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      security:
+      - Bearer: []
+      summary: Cria uma categoria (admin)
+      tags:
+      - categories
+  /me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handlers.meResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      security:
+      - Bearer: []
+      summary: Usuário autenticado
+      tags:
+      - auth
+  /tickets:
+    get:
+      parameters:
+      - description: Tamanho da página (máx. 50)
+        in: query
+        name: limit
+        type: integer
+      - description: Deslocamento
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handlers.ticketListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      security:
+      - Bearer: []
+      summary: Lista tickets (customer vê só os próprios)
+      tags:
+      - tickets
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados do ticket
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.createTicketRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_handlers.ticketResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      security:
+      - Bearer: []
+      summary: Abre um ticket
+      tags:
+      - tickets
+  /tickets/{id}:
+    get:
+      parameters:
+      - description: ID do ticket
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handlers.ticketResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      security:
+      - Bearer: []
+      summary: Detalha um ticket
+      tags:
+      - tickets
+    patch:
+      consumes:
+      - application/json
+      description: Customer só edita título/descrição do próprio; agent/admin editam
+        todos os campos.
+      parameters:
+      - description: ID do ticket
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Campos a atualizar
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.updateTicketRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handlers.ticketResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      security:
+      - Bearer: []
+      summary: Atualiza um ticket (parcial)
+      tags:
+      - tickets
+  /tickets/{id}/comments:
+    get:
+      parameters:
+      - description: ID do ticket
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handlers.commentListResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      security:
+      - Bearer: []
+      summary: Lista comentários de um ticket
+      tags:
+      - comments
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do ticket
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Comentário
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.createCommentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_handlers.commentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      security:
+      - Bearer: []
+      summary: Comenta em um ticket
+      tags:
+      - comments
+securityDefinitions:
+  Bearer:
+    description: 'Informe o token no formato: Bearer {access_token}'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

@@ -167,6 +167,35 @@ func (s *TicketService) Update(ctx context.Context, actor Actor, id int64, in Up
 	return s.store.Tickets.Update(ctx, ticket)
 }
 
+// AddComment registra um comentário num ticket. Exige que o actor enxergue o
+// ticket (customer só nos próprios, senão 404). Notas internas (is_internal)
+// só podem ser criadas por staff; um customer que tente isso recebe 403.
+func (s *TicketService) AddComment(ctx context.Context, actor Actor, ticketID int64, body string, internal bool) (db.Comment, error) {
+	if _, err := s.Get(ctx, actor, ticketID); err != nil {
+		return db.Comment{}, err
+	}
+	if internal && !actor.isStaff() {
+		return db.Comment{}, models.ErrForbidden
+	}
+	return s.store.Comments.Create(ctx, repositories.CreateCommentInput{
+		TenantID:   actor.TenantID,
+		TicketID:   ticketID,
+		AuthorID:   actor.UserID,
+		Body:       body,
+		IsInternal: internal,
+	})
+}
+
+// ListComments devolve os comentários visíveis de um ticket. Exige visibilidade
+// do ticket; customers veem apenas comentários públicos, staff vê também as
+// notas internas.
+func (s *TicketService) ListComments(ctx context.Context, actor Actor, ticketID int64) ([]db.Comment, error) {
+	if _, err := s.Get(ctx, actor, ticketID); err != nil {
+		return nil, err
+	}
+	return s.store.Comments.ListByTicket(ctx, actor.TenantID, ticketID, actor.isStaff())
+}
+
 // applyStatus muda o status e carimba resolved_at/closed_at ao entrar nesses
 // estados pela primeira vez.
 func applyStatus(t *db.Ticket, status string) {

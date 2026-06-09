@@ -10,6 +10,7 @@ import (
 
 type Querier interface {
 	CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error)
+	CreateComment(ctx context.Context, arg CreateCommentParams) (Comment, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
 	CreateTenant(ctx context.Context, arg CreateTenantParams) (Tenant, error)
 	CreateTicket(ctx context.Context, arg CreateTicketParams) (Ticket, error)
@@ -23,6 +24,8 @@ type Querier interface {
 	GetUserByEmail(ctx context.Context, arg GetUserByEmailParams) (User, error)
 	GetUserByID(ctx context.Context, arg GetUserByIDParams) (User, error)
 	ListCategoriesByTenant(ctx context.Context, tenantID int64) ([]Category, error)
+	ListCommentsByTicket(ctx context.Context, arg ListCommentsByTicketParams) ([]Comment, error)
+	ListPublicCommentsByTicket(ctx context.Context, arg ListPublicCommentsByTicketParams) ([]Comment, error)
 	ListTicketsByCreator(ctx context.Context, arg ListTicketsByCreatorParams) ([]Ticket, error)
 	ListTicketsByTenant(ctx context.Context, arg ListTicketsByTenantParams) ([]Ticket, error)
 	ListUsersByTenant(ctx context.Context, arg ListUsersByTenantParams) ([]User, error)
