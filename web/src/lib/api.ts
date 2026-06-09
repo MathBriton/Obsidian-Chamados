@@ -7,7 +7,7 @@ export interface User {
   id: number
   name: string
   email: string
-  role: string
+  role: Role
 }
 
 export interface Tenant {
@@ -54,6 +54,24 @@ export interface Ticket {
   updated_at: string
   resolved_at: string | null
   closed_at: string | null
+}
+
+export type Role = 'admin' | 'agent' | 'customer'
+
+export interface UserAdmin {
+  id: number
+  name: string
+  email: string
+  role: Role
+  is_active: boolean
+  created_at: string
+}
+
+export interface CreateUserInput {
+  name: string
+  email: string
+  password: string
+  role: Role
 }
 
 export interface Category {
@@ -139,6 +157,13 @@ export const api = {
   logout: (refreshToken: string) =>
     request<void>('/auth/logout', { method: 'POST', body: { refresh_token: refreshToken } }),
   me: (token: string) => request<{ user: User }>('/me', { token }),
+
+  listUsers: (token: string) =>
+    request<{ users: UserAdmin[] }>('/users', { token }).then((r) => r.users),
+  createUser: (token: string, input: CreateUserInput) =>
+    request<UserAdmin>('/users', { method: 'POST', body: input, token }),
+  deactivateUser: (token: string, id: number) =>
+    request<void>(`/users/${id}`, { method: 'DELETE', token }),
 
   listCategories: (token: string) =>
     request<{ categories: Category[] }>('/categories', { token }).then((r) => r.categories),

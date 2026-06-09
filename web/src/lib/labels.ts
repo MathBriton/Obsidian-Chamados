@@ -1,4 +1,4 @@
-import type { TicketPriority, TicketStatus } from './api'
+import type { Role, TicketPriority, TicketStatus } from './api'
 
 interface LabelStyle {
   label: string
@@ -19,6 +19,12 @@ export const priorityLabels: Record<TicketPriority, LabelStyle> = {
   medium: { label: 'Média', cls: 'bg-sky-100 text-sky-700' },
   high: { label: 'Alta', cls: 'bg-orange-100 text-orange-700' },
   critical: { label: 'Crítica', cls: 'bg-red-100 text-red-700' },
+}
+
+export const roleLabels: Record<Role, string> = {
+  admin: 'Administrador',
+  agent: 'Atendente',
+  customer: 'Cliente',
 }
 
 /** Ordem canônica para selects de status/prioridade. */
