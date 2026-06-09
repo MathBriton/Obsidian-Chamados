@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { ApiError, api, type RegisterInput } from '../lib/api'
 import { AuthContext, type AuthContextValue } from './context'
 import { clearSession, loadSession, saveSession, type Session } from './storage'
@@ -61,26 +61,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const authCall = async <T,>(fn: (token: string) => Promise<T>): Promise<T> => {
-    const current = session
-    if (!current) throw new ApiError(401, 'no_session', 'sessão expirada')
-    try {
-      return await fn(current.accessToken)
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        try {
-          const refreshed = saveSession(await api.refresh(current.refreshToken))
-          setSession(refreshed)
-          return await fn(refreshed.accessToken)
-        } catch {
-          clearSession()
-          setSession(null)
-          throw err
+  const authCall = useCallback(
+    async <T,>(fn: (token: string) => Promise<T>): Promise<T> => {
+      const current = session
+      if (!current) throw new ApiError(401, 'no_session', 'sessão expirada')
+      try {
+        return await fn(current.accessToken)
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          try {
+            const refreshed = saveSession(await api.refresh(current.refreshToken))
+            setSession(refreshed)
+            return await fn(refreshed.accessToken)
+          } catch {
+            clearSession()
+            setSession(null)
+            throw err
+          }
         }
+        throw err
       }
-      throw err
-    }
-  }
+    },
+    [session],
+  )
 
   const value: AuthContextValue = {
     user: session?.user ?? null,
