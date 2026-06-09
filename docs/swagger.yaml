@@ -84,6 +84,27 @@ definitions:
     - description
     - title
     type: object
+  internal_handlers.createUserRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        minLength: 8
+        type: string
+      role:
+        enum:
+        - admin
+        - agent
+        - customer
+        type: string
+    required:
+    - email
+    - name
+    - password
+    - role
+    type: object
   internal_handlers.errorBody:
     properties:
       code:
@@ -215,6 +236,28 @@ definitions:
       title:
         minLength: 1
         type: string
+    type: object
+  internal_handlers.userAdminResponse:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      name:
+        type: string
+      role:
+        type: string
+    type: object
+  internal_handlers.userListResponse:
+    properties:
+      users:
+        items:
+          $ref: '#/definitions/internal_handlers.userAdminResponse'
+        type: array
     type: object
   internal_handlers.userResponse:
     properties:
@@ -602,6 +645,91 @@ paths:
       summary: Comenta em um ticket
       tags:
       - comments
+  /users:
+    get:
+      parameters:
+      - description: Tamanho da página (máx. 50)
+        in: query
+        name: limit
+        type: integer
+      - description: Deslocamento
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handlers.userListResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      security:
+      - Bearer: []
+      summary: Lista usuários do tenant (admin)
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados do usuário
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.createUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_handlers.userAdminResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      security:
+      - Bearer: []
+      summary: Cria um usuário (admin)
+      tags:
+      - users
+  /users/{id}:
+    delete:
+      parameters:
+      - description: ID do usuário
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: Sem conteúdo
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      security:
+      - Bearer: []
+      summary: Desativa um usuário (admin)
+      tags:
+      - users
 securityDefinitions:
   Bearer:
     description: 'Informe o token no formato: Bearer {access_token}'

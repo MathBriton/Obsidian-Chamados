@@ -30,7 +30,8 @@ func newRouter(t *testing.T) *gin.Engine {
 	svc := services.NewAuthService(store, tokens, 7*24*time.Hour)
 	cats := services.NewCategoryService(store)
 	tickets := services.NewTicketService(store)
-	return handlers.New(svc, cats, tickets, tokens).Router()
+	users := services.NewUserService(store)
+	return handlers.New(svc, cats, tickets, users, tokens).Router()
 }
 
 // do envia uma requisição JSON e devolve o response recorder.

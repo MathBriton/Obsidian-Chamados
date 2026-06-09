@@ -18,6 +18,7 @@ type Handler struct {
 	auth       *services.AuthService
 	categories *services.CategoryService
 	tickets    *services.TicketService
+	users      *services.UserService
 	tokens     *auth.TokenManager
 }
 
@@ -26,12 +27,14 @@ func New(
 	authService *services.AuthService,
 	categoryService *services.CategoryService,
 	ticketService *services.TicketService,
+	userService *services.UserService,
 	tokens *auth.TokenManager,
 ) *Handler {
 	return &Handler{
 		auth:       authService,
 		categories: categoryService,
 		tickets:    ticketService,
+		users:      userService,
 		tokens:     tokens,
 	}
 }
@@ -62,6 +65,14 @@ func (h *Handler) Router() *gin.Engine {
 		api.GET("/categories", h.ListCategories)
 		// Apenas admin cria categorias.
 		api.POST("/categories", middleware.RequireRole(services.RoleAdmin), h.CreateCategory)
+
+		// Gestão de usuários — restrita a admin.
+		admin := api.Group("/users", middleware.RequireRole(services.RoleAdmin))
+		{
+			admin.GET("", h.ListUsers)
+			admin.POST("", h.CreateUser)
+			admin.DELETE("/:id", h.DeactivateUser)
+		}
 
 		api.POST("/tickets", h.CreateTicket)
 		api.GET("/tickets", h.ListTickets)

@@ -54,7 +54,8 @@ func run() error {
 	authService := services.NewAuthService(store, tokens, cfg.RefreshTokenTTL)
 	categoryService := services.NewCategoryService(store)
 	ticketService := services.NewTicketService(store)
-	router := handlers.New(authService, categoryService, ticketService, tokens).Router()
+	userService := services.NewUserService(store)
+	router := handlers.New(authService, categoryService, ticketService, userService, tokens).Router()
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,

@@ -125,8 +125,7 @@ func (h *Handler) CreateTicket(c *gin.Context) {
 // @Failure   401     {object}  errorEnvelope
 // @Router    /tickets [get]
 func (h *Handler) ListTickets(c *gin.Context) {
-	limit, _ := strconv.ParseInt(c.Query("limit"), 10, 64)
-	offset, _ := strconv.ParseInt(c.Query("offset"), 10, 64)
+	limit, offset := parsePagination(c)
 
 	tickets, err := h.tickets.List(c.Request.Context(), actor(c), limit, offset)
 	if err != nil {
@@ -208,6 +207,14 @@ func (h *Handler) UpdateTicket(c *gin.Context) {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+// parsePagination lê os parâmetros de query limit/offset (0 quando ausentes;
+// a normalização/limites ficam na camada de service).
+func parsePagination(c *gin.Context) (limit, offset int64) {
+	limit, _ = strconv.ParseInt(c.Query("limit"), 10, 64)
+	offset, _ = strconv.ParseInt(c.Query("offset"), 10, 64)
+	return limit, offset
+}
 
 // parseIDParam lê o :id da rota. Em caso de id inválido, responde 400 e
 // retorna ok=false.
