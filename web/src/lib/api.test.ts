@@ -55,4 +55,38 @@ describe('api client', () => {
     await expect(api.me('x')).rejects.toBeInstanceOf(ApiError)
     await expect(api.me('x')).rejects.toMatchObject({ code: 'network_error' })
   })
+
+  it('lista tickets desembrulhando o array da resposta', async () => {
+    const tickets = [{ id: 1, title: 'Falha', status: 'open' }]
+    mockFetch(200, { tickets })
+
+    await expect(api.listTickets('tok')).resolves.toEqual(tickets)
+  })
+
+  it('cria ticket com método POST e Bearer token', async () => {
+    const fetchSpy = mockFetch(201, { id: 9, title: 'Novo' })
+
+    await api.createTicket('tok', { title: 'Novo', description: 'desc', category_id: 2, priority: 'high' })
+
+    const [url, init] = fetchSpy.mock.calls[0]
+    expect(String(url)).toContain('/tickets')
+    expect(init?.method).toBe('POST')
+    expect((init?.headers as Record<string, string>).Authorization).toBe('Bearer tok')
+    expect(JSON.parse(init?.body as string)).toEqual({
+      title: 'Novo',
+      description: 'desc',
+      category_id: 2,
+      priority: 'high',
+    })
+  })
+
+  it('adiciona comentário no endpoint do ticket', async () => {
+    const fetchSpy = mockFetch(201, { id: 1, ticket_id: 5, body: 'oi', is_internal: false })
+
+    await api.addComment('tok', 5, 'oi', true)
+
+    const [url, init] = fetchSpy.mock.calls[0]
+    expect(String(url)).toContain('/tickets/5/comments')
+    expect(JSON.parse(init?.body as string)).toEqual({ body: 'oi', is_internal: true })
+  })
 })

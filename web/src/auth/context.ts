@@ -10,6 +10,9 @@ export interface AuthContextValue {
   login: (slug: string, email: string, password: string) => Promise<void>
   register: (input: RegisterInput) => Promise<void>
   logout: () => Promise<void>
+  /** Executa uma chamada autenticada injetando o access token. Em caso de 401,
+   * rotaciona via refresh token e tenta uma vez mais; se falhar, encerra a sessão. */
+  authCall: <T>(fn: (token: string) => Promise<T>) => Promise<T>
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)

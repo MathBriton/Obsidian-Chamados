@@ -61,6 +61,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const authCall = async <T,>(fn: (token: string) => Promise<T>): Promise<T> => {
+    const current = session
+    if (!current) throw new ApiError(401, 'no_session', 'sessão expirada')
+    try {
+      return await fn(current.accessToken)
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        try {
+          const refreshed = saveSession(await api.refresh(current.refreshToken))
+          setSession(refreshed)
+          return await fn(refreshed.accessToken)
+        } catch {
+          clearSession()
+          setSession(null)
+          throw err
+        }
+      }
+      throw err
+    }
+  }
+
   const value: AuthContextValue = {
     user: session?.user ?? null,
     tenant: session?.tenant ?? null,
@@ -69,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login,
     register,
     logout,
+    authCall,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

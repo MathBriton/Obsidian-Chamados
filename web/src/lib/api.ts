@@ -37,6 +37,55 @@ export interface LoginInput {
   password: string
 }
 
+export type TicketStatus = 'open' | 'in_progress' | 'waiting_customer' | 'resolved' | 'closed'
+export type TicketPriority = 'low' | 'medium' | 'high' | 'critical'
+
+export interface Ticket {
+  id: number
+  title: string
+  description: string
+  status: TicketStatus
+  priority: TicketPriority
+  category_id: number
+  created_by: number
+  assigned_to: number | null
+  assigned_team_id: number | null
+  created_at: string
+  updated_at: string
+  resolved_at: string | null
+  closed_at: string | null
+}
+
+export interface Category {
+  id: number
+  name: string
+}
+
+export interface Comment {
+  id: number
+  ticket_id: number
+  author_id: number
+  body: string
+  is_internal: boolean
+  created_at: string
+}
+
+export interface CreateTicketInput {
+  title: string
+  description: string
+  category_id: number
+  priority?: TicketPriority
+}
+
+export interface UpdateTicketInput {
+  title?: string
+  description?: string
+  status?: TicketStatus
+  priority?: TicketPriority
+  category_id?: number
+  assigned_to?: number
+}
+
 /** Erro de API com o código estável retornado pelo backend (RNF13). */
 export class ApiError extends Error {
   readonly status: number
@@ -90,4 +139,26 @@ export const api = {
   logout: (refreshToken: string) =>
     request<void>('/auth/logout', { method: 'POST', body: { refresh_token: refreshToken } }),
   me: (token: string) => request<{ user: User }>('/me', { token }),
+
+  listCategories: (token: string) =>
+    request<{ categories: Category[] }>('/categories', { token }).then((r) => r.categories),
+  createCategory: (token: string, name: string) =>
+    request<Category>('/categories', { method: 'POST', body: { name }, token }),
+
+  listTickets: (token: string) =>
+    request<{ tickets: Ticket[] }>('/tickets', { token }).then((r) => r.tickets),
+  getTicket: (token: string, id: number) => request<Ticket>(`/tickets/${id}`, { token }),
+  createTicket: (token: string, input: CreateTicketInput) =>
+    request<Ticket>('/tickets', { method: 'POST', body: input, token }),
+  updateTicket: (token: string, id: number, input: UpdateTicketInput) =>
+    request<Ticket>(`/tickets/${id}`, { method: 'PATCH', body: input, token }),
+
+  listComments: (token: string, ticketId: number) =>
+    request<{ comments: Comment[] }>(`/tickets/${ticketId}/comments`, { token }).then((r) => r.comments),
+  addComment: (token: string, ticketId: number, body: string, isInternal = false) =>
+    request<Comment>(`/tickets/${ticketId}/comments`, {
+      method: 'POST',
+      body: { body, is_internal: isInternal },
+      token,
+    }),
 }
