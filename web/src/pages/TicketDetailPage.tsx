@@ -17,7 +17,7 @@ export function TicketDetailPage() {
   const { data: ticket, loading, error, setData: setTicket } = useAsync(loadTicket)
   const { data: comments, reload: reloadComments } = useAsync(loadComments)
 
-  async function patch(input: { status?: TicketStatus; priority?: TicketPriority }) {
+  async function patch(input: { status?: TicketStatus; priority?: TicketPriority; assigned_to?: number }) {
     const updated = await authCall((t) => api.updateTicket(t, ticketId, input))
     setTicket(updated)
   }
@@ -82,6 +82,7 @@ export function TicketDetailPage() {
                 ))}
               </select>
             </label>
+            <AssigneeSelect value={ticket.assigned_to} onChange={(assignedTo) => void patch({ assigned_to: assignedTo })} />
           </div>
         )}
       </div>
@@ -114,6 +115,35 @@ export function TicketDetailPage() {
         <CommentForm ticketId={ticketId} isStaff={isStaff} onAdded={reloadComments} />
       </section>
     </div>
+  )
+}
+
+/** Select de responsável (staff). Popula com os usuários atribuíveis do tenant.
+ * Não permite "desatribuir" (o backend não suporta limpar assigned_to). */
+function AssigneeSelect({ value, onChange }: { value: number | null; onChange: (id: number) => void }) {
+  const { authCall } = useAuth()
+  const loader = useCallback(() => authCall((t) => api.listAssignees(t)), [authCall])
+  const { data: assignees } = useAsync(loader)
+
+  return (
+    <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+      Responsável
+      <select
+        value={value ?? ''}
+        onChange={(e) => {
+          const id = Number(e.target.value)
+          if (id > 0) onChange(id)
+        }}
+        className="rounded-lg border border-slate-300 px-3 py-2 font-normal text-slate-900 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-200"
+      >
+        <option value="">— Sem responsável —</option>
+        {assignees?.map((a) => (
+          <option key={a.id} value={a.id}>
+            {a.name}
+          </option>
+        ))}
+      </select>
+    </label>
   )
 }
 

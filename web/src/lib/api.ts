@@ -74,6 +74,13 @@ export interface CreateUserInput {
   role: Role
 }
 
+/** Visão mínima de um usuário atribuível a tickets (staff ativo). */
+export interface Assignee {
+  id: number
+  name: string
+  role: Role
+}
+
 export interface Category {
   id: number
   name: string
@@ -164,6 +171,8 @@ export const api = {
     request<UserAdmin>('/users', { method: 'POST', body: input, token }),
   deactivateUser: (token: string, id: number) =>
     request<void>(`/users/${id}`, { method: 'DELETE', token }),
+  listAssignees: (token: string) =>
+    request<{ users: Assignee[] }>('/assignees', { token }).then((r) => r.users),
 
   listCategories: (token: string) =>
     request<{ categories: Category[] }>('/categories', { token }).then((r) => r.categories),

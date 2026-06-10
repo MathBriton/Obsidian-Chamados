@@ -80,6 +80,14 @@ describe('api client', () => {
     })
   })
 
+  it('lista responsáveis atribuíveis desembrulhando o array', async () => {
+    const users = [{ id: 2, name: 'Ana', role: 'agent' }]
+    const fetchSpy = mockFetch(200, { users })
+
+    await expect(api.listAssignees('tok')).resolves.toEqual(users)
+    expect(String(fetchSpy.mock.calls[0][0])).toContain('/assignees')
+  })
+
   it('adiciona comentário no endpoint do ticket', async () => {
     const fetchSpy = mockFetch(201, { id: 1, ticket_id: 5, body: 'oi', is_internal: false })
 
