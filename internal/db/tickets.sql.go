@@ -91,24 +91,38 @@ func (q *Queries) GetTicketByID(ctx context.Context, arg GetTicketByIDParams) (T
 
 const listTicketsByCreator = `-- name: ListTicketsByCreator :many
 SELECT id, tenant_id, title, description, status, priority, category_id, created_by, assigned_to, assigned_team_id, created_at, updated_at, resolved_at, closed_at FROM tickets
-WHERE tenant_id = ? AND created_by = ?
-ORDER BY created_at DESC
-LIMIT ? OFFSET ?
+WHERE tenant_id = ?1 AND created_by = ?2
+  AND (?3 IS NULL OR status = ?3)
+  AND (?4 IS NULL OR priority = ?4)
+  AND (?5 IS NULL OR assigned_to = ?5)
+  AND (?6 IS NULL
+       OR title LIKE '%' || ?6 || '%'
+       OR description LIKE '%' || ?6 || '%')
+ORDER BY created_at DESC, id DESC
+LIMIT ?8 OFFSET ?7
 `
 
 type ListTicketsByCreatorParams struct {
-	TenantID  int64 `json:"tenant_id"`
-	CreatedBy int64 `json:"created_by"`
-	Limit     int64 `json:"limit"`
-	Offset    int64 `json:"offset"`
+	TenantID   int64       `json:"tenant_id"`
+	CreatedBy  int64       `json:"created_by"`
+	Status     interface{} `json:"status"`
+	Priority   interface{} `json:"priority"`
+	AssignedTo interface{} `json:"assigned_to"`
+	Search     interface{} `json:"search"`
+	Offset     int64       `json:"offset"`
+	Limit      int64       `json:"limit"`
 }
 
 func (q *Queries) ListTicketsByCreator(ctx context.Context, arg ListTicketsByCreatorParams) ([]Ticket, error) {
 	rows, err := q.db.QueryContext(ctx, listTicketsByCreator,
 		arg.TenantID,
 		arg.CreatedBy,
-		arg.Limit,
+		arg.Status,
+		arg.Priority,
+		arg.AssignedTo,
+		arg.Search,
 		arg.Offset,
+		arg.Limit,
 	)
 	if err != nil {
 		return nil, err
@@ -148,19 +162,37 @@ func (q *Queries) ListTicketsByCreator(ctx context.Context, arg ListTicketsByCre
 
 const listTicketsByTenant = `-- name: ListTicketsByTenant :many
 SELECT id, tenant_id, title, description, status, priority, category_id, created_by, assigned_to, assigned_team_id, created_at, updated_at, resolved_at, closed_at FROM tickets
-WHERE tenant_id = ?
-ORDER BY created_at DESC
-LIMIT ? OFFSET ?
+WHERE tenant_id = ?1
+  AND (?2 IS NULL OR status = ?2)
+  AND (?3 IS NULL OR priority = ?3)
+  AND (?4 IS NULL OR assigned_to = ?4)
+  AND (?5 IS NULL
+       OR title LIKE '%' || ?5 || '%'
+       OR description LIKE '%' || ?5 || '%')
+ORDER BY created_at DESC, id DESC
+LIMIT ?7 OFFSET ?6
 `
 
 type ListTicketsByTenantParams struct {
-	TenantID int64 `json:"tenant_id"`
-	Limit    int64 `json:"limit"`
-	Offset   int64 `json:"offset"`
+	TenantID   int64       `json:"tenant_id"`
+	Status     interface{} `json:"status"`
+	Priority   interface{} `json:"priority"`
+	AssignedTo interface{} `json:"assigned_to"`
+	Search     interface{} `json:"search"`
+	Offset     int64       `json:"offset"`
+	Limit      int64       `json:"limit"`
 }
 
 func (q *Queries) ListTicketsByTenant(ctx context.Context, arg ListTicketsByTenantParams) ([]Ticket, error) {
-	rows, err := q.db.QueryContext(ctx, listTicketsByTenant, arg.TenantID, arg.Limit, arg.Offset)
+	rows, err := q.db.QueryContext(ctx, listTicketsByTenant,
+		arg.TenantID,
+		arg.Status,
+		arg.Priority,
+		arg.AssignedTo,
+		arg.Search,
+		arg.Offset,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}

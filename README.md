@@ -108,11 +108,13 @@ curl http://localhost:8080/healthz
 | `GET`  | `/categories` | Bearer | Lista as categorias do tenant |
 | `POST` | `/categories` | Bearer (admin) | Cria uma categoria |
 | `POST` | `/tickets` | Bearer | Abre um ticket (qualquer papel) |
-| `GET`  | `/tickets` | Bearer | Lista tickets (`?limit=&offset=`) |
+| `GET`  | `/tickets` | Bearer | Lista tickets (`?status=&priority=&assigned_to=&q=&limit=&offset=`) |
 | `GET`  | `/tickets/:id` | Bearer | Detalha um ticket |
 | `PATCH`| `/tickets/:id` | Bearer | Atualização parcial |
 | `POST` | `/tickets/:id/comments` | Bearer | Comenta no ticket (`is_internal` só staff) |
 | `GET`  | `/tickets/:id/comments` | Bearer | Lista comentários (customer não vê notas internas) |
+
+**Filtros de listagem:** `GET /tickets` aceita `status`, `priority`, `assigned_to` e `q` (busca por substring em título/descrição, case-insensitive), combináveis entre si e com a paginação. Valores fora dos enums respondem **400**. Os filtros atuam dentro do escopo de visibilidade do papel — um `customer` nunca amplia o que enxerga filtrando.
 
 **Autorização (RBAC):** `customer` cria e vê/edita apenas os próprios tickets (e só `title`/`description`); `agent`/`admin` veem e editam todos do tenant, incluindo `status`, `priority`, `category_id` e `assigned_to`. Ticket de outro tenant ou de outro customer responde **404** (não revela existência — ADR-003). Transições para `resolved`/`closed` carimbam `resolved_at`/`closed_at`.
 

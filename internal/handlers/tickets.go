@@ -4,11 +4,13 @@ import (
 	"database/sql"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/MathBriton/Obsidian-Chamados/internal/db"
+	"github.com/MathBriton/Obsidian-Chamados/internal/repositories"
 	"github.com/MathBriton/Obsidian-Chamados/internal/services"
 )
 
@@ -26,6 +28,15 @@ type createTicketRequest struct {
 	Description string `json:"description" binding:"required"`
 	CategoryID  int64  `json:"category_id" binding:"required"`
 	Priority    string `json:"priority" binding:"omitempty,oneof=low medium high critical"`
+}
+
+// listTicketsQuery são os filtros opcionais da listagem. Campos ausentes não
+// filtram; valores fora do enum respondem 400.
+type listTicketsQuery struct {
+	Status     *string `form:"status" binding:"omitempty,oneof=open in_progress waiting_customer resolved closed"`
+	Priority   *string `form:"priority" binding:"omitempty,oneof=low medium high critical"`
+	AssignedTo *int64  `form:"assigned_to" binding:"omitempty,gt=0"`
+	Q          *string `form:"q"`
 }
 
 // updateTicketRequest usa ponteiros para distinguir campo ausente de valor
@@ -113,21 +124,43 @@ func (h *Handler) CreateTicket(c *gin.Context) {
 	c.JSON(http.StatusCreated, toTicketResponse(ticket))
 }
 
-// ListTickets lista os tickets visíveis ao usuário (RBAC no service).
+// ListTickets lista os tickets visíveis ao usuário (RBAC no service), com
+// filtros opcionais combináveis.
 //
 // @Summary   Lista tickets (customer vê só os próprios)
 // @Tags      tickets
 // @Produce   json
 // @Security  Bearer
-// @Param     limit   query     int  false  "Tamanho da página (máx. 50)"
-// @Param     offset  query     int  false  "Deslocamento"
+// @Param     status       query     string  false  "Filtra por status"     Enums(open, in_progress, waiting_customer, resolved, closed)
+// @Param     priority     query     string  false  "Filtra por prioridade" Enums(low, medium, high, critical)
+// @Param     assigned_to  query     int     false  "Filtra por responsável (id)"
+// @Param     q            query     string  false  "Busca por texto em título/descrição"
+// @Param     limit        query     int     false  "Tamanho da página (máx. 50)"
+// @Param     offset       query     int     false  "Deslocamento"
 // @Success   200     {object}  ticketListResponse
+// @Failure   400     {object}  errorEnvelope
 // @Failure   401     {object}  errorEnvelope
 // @Router    /tickets [get]
 func (h *Handler) ListTickets(c *gin.Context) {
 	limit, offset := parsePagination(c)
 
-	tickets, err := h.tickets.List(c.Request.Context(), actor(c), limit, offset)
+	var query listTicketsQuery
+	if err := c.ShouldBindQuery(&query); err != nil {
+		respondError(c, http.StatusBadRequest, "invalid_request", err.Error())
+		return
+	}
+	filter := repositories.TicketFilter{
+		Status:     query.Status,
+		Priority:   query.Priority,
+		AssignedTo: query.AssignedTo,
+	}
+	if query.Q != nil {
+		if q := strings.TrimSpace(*query.Q); q != "" {
+			filter.Search = &q
+		}
+	}
+
+	tickets, err := h.tickets.List(c.Request.Context(), actor(c), filter, limit, offset)
 	if err != nil {
 		respondDomainError(c, err)
 		return

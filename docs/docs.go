@@ -343,6 +343,43 @@ const docTemplate = `{
                 "summary": "Lista tickets (customer vê só os próprios)",
                 "parameters": [
                     {
+                        "enum": [
+                            "open",
+                            "in_progress",
+                            "waiting_customer",
+                            "resolved",
+                            "closed"
+                        ],
+                        "type": "string",
+                        "description": "Filtra por status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "low",
+                            "medium",
+                            "high",
+                            "critical"
+                        ],
+                        "type": "string",
+                        "description": "Filtra por prioridade",
+                        "name": "priority",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filtra por responsável (id)",
+                        "name": "assigned_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Busca por texto em título/descrição",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "Tamanho da página (máx. 50)",
                         "name": "limit",
@@ -360,6 +397,12 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/internal_handlers.ticketListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.errorEnvelope"
                         }
                     },
                     "401": {

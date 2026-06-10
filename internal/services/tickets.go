@@ -95,8 +95,9 @@ func (s *TicketService) Get(ctx context.Context, actor Actor, id int64) (db.Tick
 }
 
 // List devolve os tickets visíveis ao actor: todos do tenant para staff,
-// apenas os criados por ele para customer.
-func (s *TicketService) List(ctx context.Context, actor Actor, limit, offset int64) ([]db.Ticket, error) {
+// apenas os criados por ele para customer. O filtro é aplicado dentro desse
+// escopo de visibilidade (um customer nunca amplia o que enxerga filtrando).
+func (s *TicketService) List(ctx context.Context, actor Actor, f repositories.TicketFilter, limit, offset int64) ([]db.Ticket, error) {
 	if limit <= 0 || limit > defaultListLimit {
 		limit = defaultListLimit
 	}
@@ -104,9 +105,9 @@ func (s *TicketService) List(ctx context.Context, actor Actor, limit, offset int
 		offset = 0
 	}
 	if actor.isStaff() {
-		return s.store.Tickets.ListByTenant(ctx, actor.TenantID, limit, offset)
+		return s.store.Tickets.ListByTenant(ctx, actor.TenantID, f, limit, offset)
 	}
-	return s.store.Tickets.ListByCreator(ctx, actor.TenantID, actor.UserID, limit, offset)
+	return s.store.Tickets.ListByCreator(ctx, actor.TenantID, actor.UserID, f, limit, offset)
 }
 
 // UpdateTicketInput descreve uma atualização parcial: campos nil ficam

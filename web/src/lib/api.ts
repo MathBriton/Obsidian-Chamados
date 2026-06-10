@@ -102,6 +102,14 @@ export interface CreateTicketInput {
   priority?: TicketPriority
 }
 
+/** Filtros opcionais da listagem de tickets; combináveis entre si. */
+export interface TicketFilter {
+  status?: TicketStatus
+  priority?: TicketPriority
+  assigned_to?: number
+  q?: string
+}
+
 export interface UpdateTicketInput {
   title?: string
   description?: string
@@ -179,8 +187,14 @@ export const api = {
   createCategory: (token: string, name: string) =>
     request<Category>('/categories', { method: 'POST', body: { name }, token }),
 
-  listTickets: (token: string) =>
-    request<{ tickets: Ticket[] }>('/tickets', { token }).then((r) => r.tickets),
+  listTickets: (token: string, filter: TicketFilter = {}) => {
+    const params = new URLSearchParams()
+    for (const [key, value] of Object.entries(filter)) {
+      if (value !== undefined && value !== '') params.set(key, String(value))
+    }
+    const qs = params.toString()
+    return request<{ tickets: Ticket[] }>(`/tickets${qs ? `?${qs}` : ''}`, { token }).then((r) => r.tickets)
+  },
   getTicket: (token: string, id: number) => request<Ticket>(`/tickets/${id}`, { token }),
   createTicket: (token: string, input: CreateTicketInput) =>
     request<Ticket>('/tickets', { method: 'POST', body: input, token }),

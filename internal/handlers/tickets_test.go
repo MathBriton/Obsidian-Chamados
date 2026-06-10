@@ -149,6 +149,102 @@ func TestListTickets_RBAC(t *testing.T) {
 	}
 }
 
+// patchTicket aplica um PATCH e exige sucesso (helper para montar cenários).
+func (e env) patchTicket(t *testing.T, bearer string, id int64, body string) {
+	t.Helper()
+	if w := do(t, e.r, http.MethodPatch, fmt.Sprintf("/tickets/%d", id), body, bearer); w.Code != http.StatusOK {
+		t.Fatalf("patchTicket %d: status %d; body=%s", id, w.Code, w.Body.String())
+	}
+}
+
+// listTitles devolve os títulos retornados por GET /tickets com a query dada.
+func (e env) listTitles(t *testing.T, bearer, query string) []string {
+	t.Helper()
+	w := do(t, e.r, http.MethodGet, "/tickets"+query, "", bearer)
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /tickets%s: status %d; body=%s", query, w.Code, w.Body.String())
+	}
+	raw := decode(t, w)["tickets"].([]any)
+	titles := make([]string, 0, len(raw))
+	for _, item := range raw {
+		titles = append(titles, item.(map[string]any)["title"].(string))
+	}
+	return titles
+}
+
+func TestListTickets_Filters(t *testing.T) {
+	e := newEnv(t)
+	tn := e.seedTenant(t, "Acme", "acme")
+	cat := e.seedCategory(t, tn.ID, "Bugs")
+	customer := e.seedUser(t, tn.ID, "c@acme.com", services.RoleCustomer)
+	agent := e.seedUser(t, tn.ID, "agent@acme.com", services.RoleAgent)
+	agentTok := e.token(t, agent)
+
+	idLogin := e.createTicket(t, e.token(t, customer), cat.ID, "Falha no login")
+	idEmail := e.createTicket(t, e.token(t, customer), cat.ID, "Email fora do ar")
+	e.createTicket(t, e.token(t, customer), cat.ID, "Impressora")
+
+	e.patchTicket(t, agentTok, idLogin, `{"status":"resolved","priority":"high"}`)
+	e.patchTicket(t, agentTok, idEmail, fmt.Sprintf(`{"assigned_to":%d}`, agent.ID))
+
+	cases := []struct {
+		name, query string
+		want        []string
+	}{
+		{"por status", "?status=resolved", []string{"Falha no login"}},
+		{"por prioridade", "?priority=high", []string{"Falha no login"}},
+		{"por responsavel", fmt.Sprintf("?assigned_to=%d", agent.ID), []string{"Email fora do ar"}},
+		{"busca em titulo", "?q=email", []string{"Email fora do ar"}},
+		{"busca em descricao", "?q=desc", []string{"Impressora", "Email fora do ar", "Falha no login"}},
+		{"combinados sem resultado", "?status=resolved&priority=low", []string{}},
+		{"q em branco nao filtra", "?q=%20%20", []string{"Impressora", "Email fora do ar", "Falha no login"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := e.listTitles(t, agentTok, tc.query)
+			if len(got) != len(tc.want) {
+				t.Fatalf("query %s: %v, esperado %v", tc.query, got, tc.want)
+			}
+			for i := range tc.want {
+				if got[i] != tc.want[i] {
+					t.Fatalf("query %s: %v, esperado %v", tc.query, got, tc.want)
+				}
+			}
+		})
+	}
+}
+
+func TestListTickets_InvalidFilter(t *testing.T) {
+	e := newEnv(t)
+	tn := e.seedTenant(t, "Acme", "acme")
+	agent := e.seedUser(t, tn.ID, "agent@acme.com", services.RoleAgent)
+
+	for _, query := range []string{"?status=bogus", "?priority=urgent", "?assigned_to=0"} {
+		if w := do(t, e.r, http.MethodGet, "/tickets"+query, "", e.token(t, agent)); w.Code != http.StatusBadRequest {
+			t.Fatalf("GET /tickets%s: status %d, esperado 400", query, w.Code)
+		}
+	}
+}
+
+func TestListTickets_FilterRespectsRBAC(t *testing.T) {
+	e := newEnv(t)
+	tn := e.seedTenant(t, "Acme", "acme")
+	cat := e.seedCategory(t, tn.ID, "Bugs")
+	custA := e.seedUser(t, tn.ID, "a@acme.com", services.RoleCustomer)
+	custB := e.seedUser(t, tn.ID, "b@acme.com", services.RoleCustomer)
+
+	e.createTicket(t, e.token(t, custA), cat.ID, "segredo do A")
+	e.createTicket(t, e.token(t, custB), cat.ID, "ticket do B")
+
+	// Filtro não amplia a visibilidade: B busca o ticket de A e não acha nada.
+	if got := e.listTitles(t, e.token(t, custB), "?q=segredo"); len(got) != 0 {
+		t.Fatalf("customer B viu tickets alheios via filtro: %v", got)
+	}
+	if got := e.listTitles(t, e.token(t, custB), "?q=do+B"); len(got) != 1 {
+		t.Fatalf("customer B nao achou o proprio ticket: %v", got)
+	}
+}
+
 func TestGetTicket_CustomerCannotSeeOthers(t *testing.T) {
 	e := newEnv(t)
 	tn := e.seedTenant(t, "Acme", "acme")

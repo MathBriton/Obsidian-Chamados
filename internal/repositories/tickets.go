@@ -45,24 +45,51 @@ func (r *TicketRepository) GetByID(ctx context.Context, tenantID, id int64) (db.
 	return ticket, nil
 }
 
-// ListByTenant lista todos os tickets do tenant, paginado (visão de agent/admin).
-func (r *TicketRepository) ListByTenant(ctx context.Context, tenantID, limit, offset int64) ([]db.Ticket, error) {
+// TicketFilter restringe a listagem de tickets. Campos nil não filtram. Search
+// casa por substring (case-insensitive) em título ou descrição.
+type TicketFilter struct {
+	Status     *string
+	Priority   *string
+	AssignedTo *int64
+	Search     *string
+}
+
+// ListByTenant lista todos os tickets do tenant, filtrado e paginado (visão de
+// agent/admin).
+func (r *TicketRepository) ListByTenant(ctx context.Context, tenantID int64, f TicketFilter, limit, offset int64) ([]db.Ticket, error) {
 	return r.q.ListTicketsByTenant(ctx, db.ListTicketsByTenantParams{
-		TenantID: tenantID,
-		Limit:    limit,
-		Offset:   offset,
+		TenantID:   tenantID,
+		Status:     nullable(f.Status),
+		Priority:   nullable(f.Priority),
+		AssignedTo: nullable(f.AssignedTo),
+		Search:     nullable(f.Search),
+		Limit:      limit,
+		Offset:     offset,
 	})
 }
 
-// ListByCreator lista os tickets criados por um usuário no tenant, paginado
-// (visão de customer).
-func (r *TicketRepository) ListByCreator(ctx context.Context, tenantID, createdBy, limit, offset int64) ([]db.Ticket, error) {
+// ListByCreator lista os tickets criados por um usuário no tenant, filtrado e
+// paginado (visão de customer).
+func (r *TicketRepository) ListByCreator(ctx context.Context, tenantID, createdBy int64, f TicketFilter, limit, offset int64) ([]db.Ticket, error) {
 	return r.q.ListTicketsByCreator(ctx, db.ListTicketsByCreatorParams{
-		TenantID:  tenantID,
-		CreatedBy: createdBy,
-		Limit:     limit,
-		Offset:    offset,
+		TenantID:   tenantID,
+		CreatedBy:  createdBy,
+		Status:     nullable(f.Status),
+		Priority:   nullable(f.Priority),
+		AssignedTo: nullable(f.AssignedTo),
+		Search:     nullable(f.Search),
+		Limit:      limit,
+		Offset:     offset,
 	})
+}
+
+// nullable converte um ponteiro opcional no parâmetro esperado pelo SQLC para
+// sqlc.narg: nil quando ausente, o valor quando presente.
+func nullable[T any](p *T) interface{} {
+	if p == nil {
+		return nil
+	}
+	return *p
 }
 
 // Update persiste o ticket inteiro (read-modify-write feito no service). O

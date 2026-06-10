@@ -493,6 +493,33 @@ paths:
   /tickets:
     get:
       parameters:
+      - description: Filtra por status
+        enum:
+        - open
+        - in_progress
+        - waiting_customer
+        - resolved
+        - closed
+        in: query
+        name: status
+        type: string
+      - description: Filtra por prioridade
+        enum:
+        - low
+        - medium
+        - high
+        - critical
+        in: query
+        name: priority
+        type: string
+      - description: Filtra por responsável (id)
+        in: query
+        name: assigned_to
+        type: integer
+      - description: Busca por texto em título/descrição
+        in: query
+        name: q
+        type: string
       - description: Tamanho da página (máx. 50)
         in: query
         name: limit
@@ -508,6 +535,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/internal_handlers.ticketListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
         "401":
           description: Unauthorized
           schema:

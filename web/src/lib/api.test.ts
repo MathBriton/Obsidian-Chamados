@@ -63,6 +63,27 @@ describe('api client', () => {
     await expect(api.listTickets('tok')).resolves.toEqual(tickets)
   })
 
+  it('serializa filtros de tickets como query string, omitindo vazios', async () => {
+    const fetchSpy = mockFetch(200, { tickets: [] })
+
+    await api.listTickets('tok', { status: 'open', priority: 'high', q: 'login', assigned_to: undefined })
+
+    const url = String(fetchSpy.mock.calls[0][0])
+    expect(url).toContain('/tickets?')
+    expect(url).toContain('status=open')
+    expect(url).toContain('priority=high')
+    expect(url).toContain('q=login')
+    expect(url).not.toContain('assigned_to')
+  })
+
+  it('lista tickets sem query string quando não há filtros', async () => {
+    const fetchSpy = mockFetch(200, { tickets: [] })
+
+    await api.listTickets('tok')
+
+    expect(String(fetchSpy.mock.calls[0][0])).not.toContain('?')
+  })
+
   it('cria ticket com método POST e Bearer token', async () => {
     const fetchSpy = mockFetch(201, { id: 9, title: 'Novo' })
 
