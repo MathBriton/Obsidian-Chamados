@@ -65,6 +65,12 @@ func (r *UserRepository) ListByTenant(ctx context.Context, tenantID, limit, offs
 	})
 }
 
+// ListAssignable lista os usuários que podem receber atribuição de tickets:
+// staff ativo (admin/agent) do tenant, ordenado por nome.
+func (r *UserRepository) ListAssignable(ctx context.Context, tenantID int64) ([]db.User, error) {
+	return r.q.ListAssignableUsers(ctx, tenantID)
+}
+
 // Deactivate marca um usuário como inativo dentro do tenant.
 func (r *UserRepository) Deactivate(ctx context.Context, tenantID, id int64) error {
 	return r.q.DeactivateUser(ctx, db.DeactivateUserParams{TenantID: tenantID, ID: id})

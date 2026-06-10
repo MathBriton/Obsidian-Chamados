@@ -23,6 +23,7 @@ type Querier interface {
 	GetTicketByID(ctx context.Context, arg GetTicketByIDParams) (Ticket, error)
 	GetUserByEmail(ctx context.Context, arg GetUserByEmailParams) (User, error)
 	GetUserByID(ctx context.Context, arg GetUserByIDParams) (User, error)
+	ListAssignableUsers(ctx context.Context, tenantID int64) ([]User, error)
 	ListCategoriesByTenant(ctx context.Context, tenantID int64) ([]Category, error)
 	ListCommentsByTicket(ctx context.Context, arg ListCommentsByTicketParams) ([]Comment, error)
 	ListPublicCommentsByTicket(ctx context.Context, arg ListPublicCommentsByTicketParams) ([]Comment, error)

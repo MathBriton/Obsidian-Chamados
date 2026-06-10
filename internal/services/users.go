@@ -55,6 +55,11 @@ func (s *UserService) List(ctx context.Context, tenantID, limit, offset int64) (
 	return s.store.Users.ListByTenant(ctx, tenantID, limit, offset)
 }
 
+// ListAssignable devolve os usuários atribuíveis a tickets (staff ativo).
+func (s *UserService) ListAssignable(ctx context.Context, tenantID int64) ([]db.User, error) {
+	return s.store.Users.ListAssignable(ctx, tenantID)
+}
+
 // Deactivate desativa um usuário do tenant. Um admin não pode desativar a si
 // mesmo (evita lockout). Usuário inexistente no tenant retorna ErrNotFound.
 func (s *UserService) Deactivate(ctx context.Context, tenantID, actorID, targetID int64) error {

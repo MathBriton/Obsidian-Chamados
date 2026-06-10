@@ -1,6 +1,7 @@
 package handlers_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
@@ -104,6 +105,47 @@ func TestDeactivateUser_CannotDeactivateSelf(t *testing.T) {
 	w := do(t, e.r, http.MethodDelete, fmt.Sprintf("/users/%d", admin.ID), "", e.token(t, admin))
 	if w.Code != http.StatusForbidden {
 		t.Fatalf("auto-desativacao: status %d, esperado 403", w.Code)
+	}
+}
+
+func TestListAssignees_StaffOnlyActiveStaff(t *testing.T) {
+	e := newEnv(t)
+	tn := e.seedTenant(t, "Acme", "acme")
+	admin := e.seedUser(t, tn.ID, "admin@acme.com", services.RoleAdmin)
+	agent := e.seedUser(t, tn.ID, "agent@acme.com", services.RoleAgent)
+	e.seedUser(t, tn.ID, "cliente@acme.com", services.RoleCustomer) // não atribuível
+	inactive := e.seedUser(t, tn.ID, "ex@acme.com", services.RoleAgent)
+	if err := e.store.Users.Deactivate(context.Background(), tn.ID, inactive.ID); err != nil {
+		t.Fatalf("deactivate: %v", err)
+	}
+
+	// Agent pode listar os atribuíveis.
+	w := do(t, e.r, http.MethodGet, "/assignees", "", e.token(t, agent))
+	if w.Code != http.StatusOK {
+		t.Fatalf("status %d, esperado 200", w.Code)
+	}
+	users := decode(t, w)["users"].([]any)
+	if len(users) != 2 {
+		t.Fatalf("listou %d atribuiveis, esperado 2 (admin + agent ativos)", len(users))
+	}
+	// Confere que customer e inativo ficaram de fora.
+	ids := map[int64]bool{}
+	for _, u := range users {
+		ids[int64(u.(map[string]any)["id"].(float64))] = true
+	}
+	if !ids[admin.ID] || !ids[agent.ID] {
+		t.Fatalf("esperava admin (%d) e agent (%d) na lista", admin.ID, agent.ID)
+	}
+}
+
+func TestListAssignees_CustomerForbidden(t *testing.T) {
+	e := newEnv(t)
+	tn := e.seedTenant(t, "Acme", "acme")
+	customer := e.seedUser(t, tn.ID, "c@acme.com", services.RoleCustomer)
+
+	w := do(t, e.r, http.MethodGet, "/assignees", "", e.token(t, customer))
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("status %d, esperado 403", w.Code)
 	}
 }
 

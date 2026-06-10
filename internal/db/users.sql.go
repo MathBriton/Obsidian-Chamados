@@ -118,6 +118,45 @@ func (q *Queries) GetUserByID(ctx context.Context, arg GetUserByIDParams) (User,
 	return i, err
 }
 
+const listAssignableUsers = `-- name: ListAssignableUsers :many
+SELECT id, tenant_id, name, email, password_hash, role, is_active, created_at, updated_at FROM users
+WHERE tenant_id = ? AND is_active = 1 AND role IN ('admin', 'agent')
+ORDER BY name
+`
+
+func (q *Queries) ListAssignableUsers(ctx context.Context, tenantID int64) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, listAssignableUsers, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []User{}
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.Name,
+			&i.Email,
+			&i.PasswordHash,
+			&i.Role,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listUsersByTenant = `-- name: ListUsersByTenant :many
 SELECT id, tenant_id, name, email, password_hash, role, is_active, created_at, updated_at FROM users
 WHERE tenant_id = ?

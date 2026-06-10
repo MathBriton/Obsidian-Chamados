@@ -1,5 +1,21 @@
 basePath: /
 definitions:
+  internal_handlers.assignableListResponse:
+    properties:
+      users:
+        items:
+          $ref: '#/definitions/internal_handlers.assignableUser'
+        type: array
+    type: object
+  internal_handlers.assignableUser:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+      role:
+        type: string
+    type: object
   internal_handlers.authResponse:
     properties:
       access_token:
@@ -278,6 +294,24 @@ info:
   title: Obsidian Chamados API
   version: 0.3.0
 paths:
+  /assignees:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handlers.assignableListResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      security:
+      - Bearer: []
+      summary: Lista usuários atribuíveis a tickets (staff)
+      tags:
+      - users
   /auth/login:
     post:
       consumes:

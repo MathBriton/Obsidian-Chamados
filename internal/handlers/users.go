@@ -33,6 +33,18 @@ type userListResponse struct {
 	Users []userAdminResponse `json:"users"`
 }
 
+// assignableUser é a visão mínima de um usuário para popular o select de
+// responsável (não expõe email nem datas).
+type assignableUser struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+	Role string `json:"role"`
+}
+
+type assignableListResponse struct {
+	Users []assignableUser `json:"users"`
+}
+
 func toUserAdminResponse(u db.User) userAdminResponse {
 	return userAdminResponse{
 		ID:        u.ID,
@@ -98,6 +110,29 @@ func (h *Handler) ListUsers(c *gin.Context) {
 	out := make([]userAdminResponse, 0, len(users))
 	for _, u := range users {
 		out = append(out, toUserAdminResponse(u))
+	}
+	c.JSON(http.StatusOK, gin.H{"users": out})
+}
+
+// ListAssignees lista os usuários atribuíveis a tickets (staff ativo).
+// Acessível a staff (admin/agent), pois agents também atribuem chamados.
+//
+// @Summary   Lista usuários atribuíveis a tickets (staff)
+// @Tags      users
+// @Produce   json
+// @Security  Bearer
+// @Success   200  {object}  assignableListResponse
+// @Failure   403  {object}  errorEnvelope
+// @Router    /assignees [get]
+func (h *Handler) ListAssignees(c *gin.Context) {
+	users, err := h.users.ListAssignable(c.Request.Context(), middleware.TenantID(c))
+	if err != nil {
+		respondDomainError(c, err)
+		return
+	}
+	out := make([]assignableUser, 0, len(users))
+	for _, u := range users {
+		out = append(out, assignableUser{ID: u.ID, Name: u.Name, Role: u.Role})
 	}
 	c.JSON(http.StatusOK, gin.H{"users": out})
 }

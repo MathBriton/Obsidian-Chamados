@@ -19,6 +19,11 @@ WHERE tenant_id = ?
 ORDER BY created_at DESC
 LIMIT ? OFFSET ?;
 
+-- name: ListAssignableUsers :many
+SELECT * FROM users
+WHERE tenant_id = ? AND is_active = 1 AND role IN ('admin', 'agent')
+ORDER BY name;
+
 -- name: DeactivateUser :exec
 UPDATE users
 SET is_active = 0, updated_at = CURRENT_TIMESTAMP
