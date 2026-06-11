@@ -110,12 +110,15 @@ export interface TicketStats {
   by_priority: Record<TicketPriority, number>
 }
 
-/** Filtros opcionais da listagem de tickets; combináveis entre si. */
+/** Filtros opcionais da listagem de tickets; combináveis entre si e com a
+ * paginação (limit máx. 50 no backend). */
 export interface TicketFilter {
   status?: TicketStatus
   priority?: TicketPriority
   assigned_to?: number
   q?: string
+  limit?: number
+  offset?: number
 }
 
 export interface UpdateTicketInput {
