@@ -36,6 +36,16 @@ type RefreshToken struct {
 	CreatedAt time.Time    `json:"created_at"`
 }
 
+type SlaPolicy struct {
+	ID                int64     `json:"id"`
+	TenantID          int64     `json:"tenant_id"`
+	Priority          string    `json:"priority"`
+	FirstResponseMins int64     `json:"first_response_mins"`
+	ResolutionMins    int64     `json:"resolution_mins"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
+}
+
 type Team struct {
 	ID        int64     `json:"id"`
 	TenantID  int64     `json:"tenant_id"`
@@ -58,20 +68,23 @@ type Tenant struct {
 }
 
 type Ticket struct {
-	ID             int64         `json:"id"`
-	TenantID       int64         `json:"tenant_id"`
-	Title          string        `json:"title"`
-	Description    string        `json:"description"`
-	Status         string        `json:"status"`
-	Priority       string        `json:"priority"`
-	CategoryID     int64         `json:"category_id"`
-	CreatedBy      int64         `json:"created_by"`
-	AssignedTo     sql.NullInt64 `json:"assigned_to"`
-	AssignedTeamID sql.NullInt64 `json:"assigned_team_id"`
-	CreatedAt      time.Time     `json:"created_at"`
-	UpdatedAt      time.Time     `json:"updated_at"`
-	ResolvedAt     sql.NullTime  `json:"resolved_at"`
-	ClosedAt       sql.NullTime  `json:"closed_at"`
+	ID                 int64         `json:"id"`
+	TenantID           int64         `json:"tenant_id"`
+	Title              string        `json:"title"`
+	Description        string        `json:"description"`
+	Status             string        `json:"status"`
+	Priority           string        `json:"priority"`
+	CategoryID         int64         `json:"category_id"`
+	CreatedBy          int64         `json:"created_by"`
+	AssignedTo         sql.NullInt64 `json:"assigned_to"`
+	AssignedTeamID     sql.NullInt64 `json:"assigned_team_id"`
+	CreatedAt          time.Time     `json:"created_at"`
+	UpdatedAt          time.Time     `json:"updated_at"`
+	ResolvedAt         sql.NullTime  `json:"resolved_at"`
+	ClosedAt           sql.NullTime  `json:"closed_at"`
+	FirstResponseDueAt sql.NullTime  `json:"first_response_due_at"`
+	ResolutionDueAt    sql.NullTime  `json:"resolution_due_at"`
+	FirstRespondedAt   sql.NullTime  `json:"first_responded_at"`
 }
 
 type TicketEvent struct {

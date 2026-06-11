@@ -196,6 +196,24 @@ definitions:
     - slug
     - tenant_name
     type: object
+  internal_handlers.slaPolicyListResponse:
+    properties:
+      policies:
+        items:
+          $ref: '#/definitions/internal_handlers.slaPolicyResponse'
+        type: array
+    type: object
+  internal_handlers.slaPolicyResponse:
+    properties:
+      first_response_mins:
+        type: integer
+      priority:
+        type: string
+      resolution_mins:
+        type: integer
+      updated_at:
+        type: string
+    type: object
   internal_handlers.statsResponse:
     properties:
       by_priority:
@@ -297,11 +315,21 @@ definitions:
         type: integer
       description:
         type: string
+      first_responded_at:
+        type: string
+      first_response_due_at:
+        type: string
       id:
         type: integer
       priority:
         type: string
+      resolution_due_at:
+        type: string
       resolved_at:
+        type: string
+      sla_resolution_state:
+        type: string
+      sla_response_state:
         type: string
       status:
         type: string
@@ -339,6 +367,16 @@ definitions:
       title:
         minLength: 1
         type: string
+    type: object
+  internal_handlers.upsertSLAPolicyRequest:
+    properties:
+      first_response_mins:
+        type: integer
+      resolution_mins:
+        type: integer
+    required:
+    - first_response_mins
+    - resolution_mins
     type: object
   internal_handlers.userAdminResponse:
     properties:
@@ -379,7 +417,7 @@ info:
     SaaS multi-tenant de gestão de chamados (help desk / service desk).
     Autenticação via Bearer JWT: obtenha o access_token em /auth/register ou /auth/login e informe-o em "Authorize".
   title: Obsidian Chamados API
-  version: 0.3.0
+  version: 0.4.0
 paths:
   /assignees:
     get:
@@ -577,6 +615,69 @@ paths:
       summary: Usuário autenticado
       tags:
       - auth
+  /sla-policies:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handlers.slaPolicyListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      security:
+      - Bearer: []
+      summary: Lista as políticas de SLA do tenant (staff)
+      tags:
+      - sla
+  /sla-policies/{priority}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Prioridade
+        enum:
+        - low
+        - medium
+        - high
+        - critical
+        in: path
+        name: priority
+        required: true
+        type: string
+      - description: Tempos de SLA em minutos
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.upsertSLAPolicyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handlers.slaPolicyResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      security:
+      - Bearer: []
+      summary: Define a política de SLA de uma prioridade (admin)
+      tags:
+      - sla
   /stats:
     get:
       produces:
@@ -758,6 +859,12 @@ paths:
         in: query
         name: team_id
         type: integer
+      - description: Filtra por SLA estourado
+        enum:
+        - breached
+        in: query
+        name: sla
+        type: string
       - description: Busca por texto em título/descrição
         in: query
         name: q

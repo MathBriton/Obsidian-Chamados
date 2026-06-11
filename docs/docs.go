@@ -327,6 +327,105 @@ const docTemplate = `{
                 }
             }
         },
+        "/sla-policies": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sla"
+                ],
+                "summary": "Lista as políticas de SLA do tenant (staff)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.slaPolicyListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.errorEnvelope"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.errorEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/sla-policies/{priority}": {
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sla"
+                ],
+                "summary": "Define a política de SLA de uma prioridade (admin)",
+                "parameters": [
+                    {
+                        "enum": [
+                            "low",
+                            "medium",
+                            "high",
+                            "critical"
+                        ],
+                        "type": "string",
+                        "description": "Prioridade",
+                        "name": "priority",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Tempos de SLA em minutos",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.upsertSLAPolicyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.slaPolicyResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.errorEnvelope"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.errorEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/stats": {
             "get": {
                 "security": [
@@ -618,6 +717,15 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Filtra por equipe (id)",
                         "name": "team_id",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "breached"
+                        ],
+                        "type": "string",
+                        "description": "Filtra por SLA estourado",
+                        "name": "sla",
                         "in": "query"
                     },
                     {
@@ -1393,6 +1501,34 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_handlers.slaPolicyListResponse": {
+            "type": "object",
+            "properties": {
+                "policies": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_handlers.slaPolicyResponse"
+                    }
+                }
+            }
+        },
+        "internal_handlers.slaPolicyResponse": {
+            "type": "object",
+            "properties": {
+                "first_response_mins": {
+                    "type": "integer"
+                },
+                "priority": {
+                    "type": "string"
+                },
+                "resolution_mins": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_handlers.statsResponse": {
             "type": "object",
             "properties": {
@@ -1547,13 +1683,28 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "first_responded_at": {
+                    "type": "string"
+                },
+                "first_response_due_at": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "integer"
                 },
                 "priority": {
                     "type": "string"
                 },
+                "resolution_due_at": {
+                    "type": "string"
+                },
                 "resolved_at": {
+                    "type": "string"
+                },
+                "sla_resolution_state": {
+                    "type": "string"
+                },
+                "sla_response_state": {
                     "type": "string"
                 },
                 "status": {
@@ -1605,6 +1756,21 @@ const docTemplate = `{
                 "title": {
                     "type": "string",
                     "minLength": 1
+                }
+            }
+        },
+        "internal_handlers.upsertSLAPolicyRequest": {
+            "type": "object",
+            "required": [
+                "first_response_mins",
+                "resolution_mins"
+            ],
+            "properties": {
+                "first_response_mins": {
+                    "type": "integer"
+                },
+                "resolution_mins": {
+                    "type": "integer"
                 }
             }
         },
@@ -1672,7 +1838,7 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "0.3.0",
+	Version:          "0.4.0",
 	Host:             "",
 	BasePath:         "/",
 	Schemes:          []string{},

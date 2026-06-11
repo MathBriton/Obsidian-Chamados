@@ -32,7 +32,8 @@ func newRouter(t *testing.T) *gin.Engine {
 	tickets := services.NewTicketService(store)
 	users := services.NewUserService(store)
 	teams := services.NewTeamService(store)
-	return handlers.New(svc, cats, tickets, users, teams, tokens).Router()
+	sla := services.NewSLAService(store)
+	return handlers.New(svc, cats, tickets, users, teams, sla, tokens).Router()
 }
 
 // do envia uma requisição JSON e devolve o response recorder.

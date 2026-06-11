@@ -24,6 +24,7 @@ type Querier interface {
 	DeactivateUser(ctx context.Context, arg DeactivateUserParams) error
 	GetCategoryByID(ctx context.Context, arg GetCategoryByIDParams) (Category, error)
 	GetRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
+	GetSLAPolicyByPriority(ctx context.Context, arg GetSLAPolicyByPriorityParams) (SlaPolicy, error)
 	GetTeamByID(ctx context.Context, arg GetTeamByIDParams) (Team, error)
 	GetTenantByID(ctx context.Context, id int64) (Tenant, error)
 	GetTenantBySlug(ctx context.Context, slug string) (Tenant, error)
@@ -34,6 +35,7 @@ type Querier interface {
 	ListCategoriesByTenant(ctx context.Context, tenantID int64) ([]Category, error)
 	ListCommentsByTicket(ctx context.Context, arg ListCommentsByTicketParams) ([]ListCommentsByTicketRow, error)
 	ListPublicCommentsByTicket(ctx context.Context, arg ListPublicCommentsByTicketParams) ([]ListPublicCommentsByTicketRow, error)
+	ListSLAPoliciesByTenant(ctx context.Context, tenantID int64) ([]SlaPolicy, error)
 	ListTeamMembersByTenant(ctx context.Context, tenantID int64) ([]ListTeamMembersByTenantRow, error)
 	ListTeamsByTenant(ctx context.Context, tenantID int64) ([]Team, error)
 	ListTicketEvents(ctx context.Context, arg ListTicketEventsParams) ([]ListTicketEventsRow, error)
@@ -43,7 +45,9 @@ type Querier interface {
 	RemoveTeamMember(ctx context.Context, arg RemoveTeamMemberParams) error
 	RevokeAllUserTokens(ctx context.Context, arg RevokeAllUserTokensParams) error
 	RevokeRefreshToken(ctx context.Context, tokenHash string) error
+	StampFirstResponse(ctx context.Context, arg StampFirstResponseParams) error
 	UpdateTicket(ctx context.Context, arg UpdateTicketParams) (Ticket, error)
+	UpsertSLAPolicy(ctx context.Context, arg UpsertSLAPolicyParams) (SlaPolicy, error)
 }
 
 var _ Querier = (*Queries)(nil)

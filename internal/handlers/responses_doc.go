@@ -26,3 +26,7 @@ type teamListResponse struct {
 type ticketEventListResponse struct {
 	Events []ticketEventResponse `json:"events"`
 }
+
+type slaPolicyListResponse struct {
+	Policies []slaPolicyResponse `json:"policies"`
+}

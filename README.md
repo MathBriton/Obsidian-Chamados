@@ -108,7 +108,7 @@ curl http://localhost:8080/healthz
 | `GET`  | `/categories` | Bearer | Lista as categorias do tenant |
 | `POST` | `/categories` | Bearer (admin) | Cria uma categoria |
 | `POST` | `/tickets` | Bearer | Abre um ticket (qualquer papel) |
-| `GET`  | `/tickets` | Bearer | Lista tickets (`?status=&priority=&assigned_to=&team_id=&q=&limit=&offset=`) |
+| `GET`  | `/tickets` | Bearer | Lista tickets (`?status=&priority=&assigned_to=&team_id=&sla=&q=&limit=&offset=`) |
 | `GET`  | `/tickets/:id` | Bearer | Detalha um ticket |
 | `PATCH`| `/tickets/:id` | Bearer | Atualização parcial |
 | `POST` | `/tickets/:id/comments` | Bearer | Comenta no ticket (`is_internal` só staff) |
@@ -119,12 +119,16 @@ curl http://localhost:8080/healthz
 | `POST` | `/teams` | Bearer (admin) | Cria uma equipe |
 | `POST` | `/teams/:id/members` | Bearer (admin) | Vincula um usuário staff à equipe (idempotente) |
 | `DELETE` | `/teams/:id/members/:userID` | Bearer (admin) | Desvincula um membro (idempotente) |
+| `GET` | `/sla-policies` | Bearer (staff) | Lista as políticas de SLA do tenant (por prioridade) |
+| `PUT` | `/sla-policies/:priority` | Bearer (admin) | Define os prazos de SLA de uma prioridade |
 
 **Métricas:** `GET /stats` resume os tickets no mesmo escopo de visibilidade da listagem — staff vê o tenant inteiro, customer só os próprios. Os mapas `by_status`/`by_priority` vêm zero-preenchidos com todos os valores dos enums.
 
-**Filtros de listagem:** `GET /tickets` aceita `status`, `priority`, `assigned_to`, `team_id` e `q` (busca por substring em título/descrição, case-insensitive), combináveis entre si e com a paginação. Valores fora dos enums respondem **400**. Os filtros atuam dentro do escopo de visibilidade do papel — um `customer` nunca amplia o que enxerga filtrando.
+**Filtros de listagem:** `GET /tickets` aceita `status`, `priority`, `assigned_to`, `team_id`, `sla` (`breached`) e `q` (busca por substring em título/descrição, case-insensitive), combináveis entre si e com a paginação. Valores fora dos enums respondem **400**. Os filtros atuam dentro do escopo de visibilidade do papel — um `customer` nunca amplia o que enxerga filtrando.
 
 **Histórico:** abertura e mudanças de status/prioridade/categoria/responsável/equipe são gravadas em `ticket_events` na mesma transação do update, com snapshots legíveis do momento do evento. `GET /tickets/:id/events` segue a visibilidade do ticket.
+
+**SLA & prazos:** cada tenant tem uma política de SLA por prioridade (`low`/`medium`/`high`/`critical`) com dois tempos em minutos — **primeira resposta** e **resolução**. Ao abrir o ticket, os prazos (`first_response_due_at`, `resolution_due_at`) são calculados a partir da abertura; mudar a prioridade os recalcula. A **primeira resposta** é carimbada (`first_responded_at`) no primeiro comentário **público de staff** (nota interna não conta). Cada ticket expõe `sla_response_state` e `sla_resolution_state` — `none` (sem política), `ok`, `at_risk` (resta ≤20% da janela), `breached` (vencido sem cumprir) ou `met` (cumprido no prazo) —, **derivados em tempo de leitura** (sem job de varredura). O relógio corre em tempo absoluto, sem pausa em `waiting_customer` (MVP). Políticas padrão são semeadas no registro de cada tenant; `admin` ajusta em `PUT /sla-policies/:priority`. `GET /tickets?sla=breached` lista os tickets com SLA estourado.
 
 **Autorização (RBAC):** `customer` cria e vê/edita apenas os próprios tickets (e só `title`/`description`); `agent`/`admin` veem e editam todos do tenant, incluindo `status`, `priority`, `category_id` e `assigned_to`. Ticket de outro tenant ou de outro customer responde **404** (não revela existência — ADR-003). Transições para `resolved`/`closed` carimbam `resolved_at`/`closed_at`.
 

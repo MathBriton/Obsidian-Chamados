@@ -76,6 +76,17 @@ func (s *AuthService) Register(ctx context.Context, in RegisterInput) (AuthResul
 		if err != nil {
 			return err
 		}
+		// Semeia as políticas de SLA padrão do tenant recém-criado.
+		for _, p := range DefaultSLAPolicies {
+			if _, err = r.SLA.Upsert(ctx, repositories.UpsertPolicyInput{
+				TenantID:          tenant.ID,
+				Priority:          p.Priority,
+				FirstResponseMins: p.FirstResponseMins,
+				ResolutionMins:    p.ResolutionMins,
+			}); err != nil {
+				return err
+			}
+		}
 		_, err = r.Tokens.Create(ctx, tenant.ID, user.ID, refreshHash, s.refreshExpiry())
 		return err
 	})

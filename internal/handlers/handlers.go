@@ -20,6 +20,7 @@ type Handler struct {
 	tickets    *services.TicketService
 	users      *services.UserService
 	teams      *services.TeamService
+	sla        *services.SLAService
 	tokens     *auth.TokenManager
 }
 
@@ -30,6 +31,7 @@ func New(
 	ticketService *services.TicketService,
 	userService *services.UserService,
 	teamService *services.TeamService,
+	slaService *services.SLAService,
 	tokens *auth.TokenManager,
 ) *Handler {
 	return &Handler{
@@ -38,6 +40,7 @@ func New(
 		tickets:    ticketService,
 		users:      userService,
 		teams:      teamService,
+		sla:        slaService,
 		tokens:     tokens,
 	}
 }
@@ -85,6 +88,10 @@ func (h *Handler) Router() *gin.Engine {
 		api.POST("/teams", middleware.RequireRole(services.RoleAdmin), h.CreateTeam)
 		api.POST("/teams/:id/members", middleware.RequireRole(services.RoleAdmin), h.AddTeamMember)
 		api.DELETE("/teams/:id/members/:userID", middleware.RequireRole(services.RoleAdmin), h.RemoveTeamMember)
+
+		// Políticas de SLA: staff lê; admin define os prazos por prioridade.
+		api.GET("/sla-policies", middleware.RequireRole(services.RoleAdmin, services.RoleAgent), h.ListSLAPolicies)
+		api.PUT("/sla-policies/:priority", middleware.RequireRole(services.RoleAdmin), h.UpsertSLAPolicy)
 
 		// Métricas de tickets no escopo de visibilidade do papel.
 		api.GET("/stats", h.GetStats)

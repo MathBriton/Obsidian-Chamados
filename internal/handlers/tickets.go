@@ -37,6 +37,7 @@ type listTicketsQuery struct {
 	Priority   *string `form:"priority" binding:"omitempty,oneof=low medium high critical"`
 	AssignedTo *int64  `form:"assigned_to" binding:"omitempty,gt=0"`
 	TeamID     *int64  `form:"team_id" binding:"omitempty,gt=0"`
+	SLA        *string `form:"sla" binding:"omitempty,oneof=breached"`
 	Q          *string `form:"q"`
 }
 
@@ -57,36 +58,47 @@ type updateTicketRequest struct {
 // ---------------------------------------------------------------------------
 
 type ticketResponse struct {
-	ID             int64      `json:"id"`
-	Title          string     `json:"title"`
-	Description    string     `json:"description"`
-	Status         string     `json:"status"`
-	Priority       string     `json:"priority"`
-	CategoryID     int64      `json:"category_id"`
-	CreatedBy      int64      `json:"created_by"`
-	AssignedTo     *int64     `json:"assigned_to"`
-	AssignedTeamID *int64     `json:"assigned_team_id"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
-	ResolvedAt     *time.Time `json:"resolved_at"`
-	ClosedAt       *time.Time `json:"closed_at"`
+	ID                 int64      `json:"id"`
+	Title              string     `json:"title"`
+	Description        string     `json:"description"`
+	Status             string     `json:"status"`
+	Priority           string     `json:"priority"`
+	CategoryID         int64      `json:"category_id"`
+	CreatedBy          int64      `json:"created_by"`
+	AssignedTo         *int64     `json:"assigned_to"`
+	AssignedTeamID     *int64     `json:"assigned_team_id"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
+	ResolvedAt         *time.Time `json:"resolved_at"`
+	ClosedAt           *time.Time `json:"closed_at"`
+	FirstResponseDueAt *time.Time `json:"first_response_due_at"`
+	ResolutionDueAt    *time.Time `json:"resolution_due_at"`
+	FirstRespondedAt   *time.Time `json:"first_responded_at"`
+	SLAResponseState   string     `json:"sla_response_state"`
+	SLAResolutionState string     `json:"sla_resolution_state"`
 }
 
 func toTicketResponse(t db.Ticket) ticketResponse {
+	now := time.Now().UTC()
 	return ticketResponse{
-		ID:             t.ID,
-		Title:          t.Title,
-		Description:    t.Description,
-		Status:         t.Status,
-		Priority:       t.Priority,
-		CategoryID:     t.CategoryID,
-		CreatedBy:      t.CreatedBy,
-		AssignedTo:     nullInt(t.AssignedTo),
-		AssignedTeamID: nullInt(t.AssignedTeamID),
-		CreatedAt:      t.CreatedAt,
-		UpdatedAt:      t.UpdatedAt,
-		ResolvedAt:     nullTime(t.ResolvedAt),
-		ClosedAt:       nullTime(t.ClosedAt),
+		ID:                 t.ID,
+		Title:              t.Title,
+		Description:        t.Description,
+		Status:             t.Status,
+		Priority:           t.Priority,
+		CategoryID:         t.CategoryID,
+		CreatedBy:          t.CreatedBy,
+		AssignedTo:         nullInt(t.AssignedTo),
+		AssignedTeamID:     nullInt(t.AssignedTeamID),
+		CreatedAt:          t.CreatedAt,
+		UpdatedAt:          t.UpdatedAt,
+		ResolvedAt:         nullTime(t.ResolvedAt),
+		ClosedAt:           nullTime(t.ClosedAt),
+		FirstResponseDueAt: nullTime(t.FirstResponseDueAt),
+		ResolutionDueAt:    nullTime(t.ResolutionDueAt),
+		FirstRespondedAt:   nullTime(t.FirstRespondedAt),
+		SLAResponseState:   services.SLAState(t.FirstResponseDueAt, t.FirstRespondedAt, t.CreatedAt, now),
+		SLAResolutionState: services.SLAState(t.ResolutionDueAt, t.ResolvedAt, t.CreatedAt, now),
 	}
 }
 
@@ -137,6 +149,7 @@ func (h *Handler) CreateTicket(c *gin.Context) {
 // @Param     priority     query     string  false  "Filtra por prioridade" Enums(low, medium, high, critical)
 // @Param     assigned_to  query     int     false  "Filtra por responsável (id)"
 // @Param     team_id      query     int     false  "Filtra por equipe (id)"
+// @Param     sla          query     string  false  "Filtra por SLA estourado"  Enums(breached)
 // @Param     q            query     string  false  "Busca por texto em título/descrição"
 // @Param     limit        query     int     false  "Tamanho da página (máx. 50)"
 // @Param     offset       query     int     false  "Deslocamento"
@@ -162,6 +175,10 @@ func (h *Handler) ListTickets(c *gin.Context) {
 		if q := strings.TrimSpace(*query.Q); q != "" {
 			filter.Search = &q
 		}
+	}
+	if query.SLA != nil && *query.SLA == "breached" {
+		now := time.Now().UTC()
+		filter.BreachedBefore = &now
 	}
 
 	tickets, err := h.tickets.List(c.Request.Context(), actor(c), filter, limit, offset)

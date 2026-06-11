@@ -111,19 +111,24 @@ func (q *Queries) CountUnassignedActiveTickets(ctx context.Context, arg CountUna
 }
 
 const createTicket = `-- name: CreateTicket :one
-INSERT INTO tickets (tenant_id, title, description, status, priority, category_id, created_by)
-VALUES (?, ?, ?, ?, ?, ?, ?)
-RETURNING id, tenant_id, title, description, status, priority, category_id, created_by, assigned_to, assigned_team_id, created_at, updated_at, resolved_at, closed_at
+INSERT INTO tickets (
+    tenant_id, title, description, status, priority, category_id, created_by,
+    first_response_due_at, resolution_due_at
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id, tenant_id, title, description, status, priority, category_id, created_by, assigned_to, assigned_team_id, created_at, updated_at, resolved_at, closed_at, first_response_due_at, resolution_due_at, first_responded_at
 `
 
 type CreateTicketParams struct {
-	TenantID    int64  `json:"tenant_id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	Status      string `json:"status"`
-	Priority    string `json:"priority"`
-	CategoryID  int64  `json:"category_id"`
-	CreatedBy   int64  `json:"created_by"`
+	TenantID           int64        `json:"tenant_id"`
+	Title              string       `json:"title"`
+	Description        string       `json:"description"`
+	Status             string       `json:"status"`
+	Priority           string       `json:"priority"`
+	CategoryID         int64        `json:"category_id"`
+	CreatedBy          int64        `json:"created_by"`
+	FirstResponseDueAt sql.NullTime `json:"first_response_due_at"`
+	ResolutionDueAt    sql.NullTime `json:"resolution_due_at"`
 }
 
 func (q *Queries) CreateTicket(ctx context.Context, arg CreateTicketParams) (Ticket, error) {
@@ -135,6 +140,8 @@ func (q *Queries) CreateTicket(ctx context.Context, arg CreateTicketParams) (Tic
 		arg.Priority,
 		arg.CategoryID,
 		arg.CreatedBy,
+		arg.FirstResponseDueAt,
+		arg.ResolutionDueAt,
 	)
 	var i Ticket
 	err := row.Scan(
@@ -152,12 +159,15 @@ func (q *Queries) CreateTicket(ctx context.Context, arg CreateTicketParams) (Tic
 		&i.UpdatedAt,
 		&i.ResolvedAt,
 		&i.ClosedAt,
+		&i.FirstResponseDueAt,
+		&i.ResolutionDueAt,
+		&i.FirstRespondedAt,
 	)
 	return i, err
 }
 
 const getTicketByID = `-- name: GetTicketByID :one
-SELECT id, tenant_id, title, description, status, priority, category_id, created_by, assigned_to, assigned_team_id, created_at, updated_at, resolved_at, closed_at FROM tickets
+SELECT id, tenant_id, title, description, status, priority, category_id, created_by, assigned_to, assigned_team_id, created_at, updated_at, resolved_at, closed_at, first_response_due_at, resolution_due_at, first_responded_at FROM tickets
 WHERE tenant_id = ? AND id = ?
 LIMIT 1
 `
@@ -185,12 +195,15 @@ func (q *Queries) GetTicketByID(ctx context.Context, arg GetTicketByIDParams) (T
 		&i.UpdatedAt,
 		&i.ResolvedAt,
 		&i.ClosedAt,
+		&i.FirstResponseDueAt,
+		&i.ResolutionDueAt,
+		&i.FirstRespondedAt,
 	)
 	return i, err
 }
 
 const listTicketsByCreator = `-- name: ListTicketsByCreator :many
-SELECT id, tenant_id, title, description, status, priority, category_id, created_by, assigned_to, assigned_team_id, created_at, updated_at, resolved_at, closed_at FROM tickets
+SELECT id, tenant_id, title, description, status, priority, category_id, created_by, assigned_to, assigned_team_id, created_at, updated_at, resolved_at, closed_at, first_response_due_at, resolution_due_at, first_responded_at FROM tickets
 WHERE tenant_id = ?1 AND created_by = ?2
   AND (?3 IS NULL OR status = ?3)
   AND (?4 IS NULL OR priority = ?4)
@@ -199,20 +212,26 @@ WHERE tenant_id = ?1 AND created_by = ?2
   AND (?7 IS NULL
        OR title LIKE '%' || ?7 || '%'
        OR description LIKE '%' || ?7 || '%')
+  AND (?8 IS NULL OR (
+        (resolution_due_at IS NOT NULL AND resolved_at IS NULL
+         AND resolution_due_at < ?8)
+     OR (first_response_due_at IS NOT NULL AND first_responded_at IS NULL
+         AND first_response_due_at < ?8)))
 ORDER BY created_at DESC, id DESC
-LIMIT ?9 OFFSET ?8
+LIMIT ?10 OFFSET ?9
 `
 
 type ListTicketsByCreatorParams struct {
-	TenantID   int64       `json:"tenant_id"`
-	CreatedBy  int64       `json:"created_by"`
-	Status     interface{} `json:"status"`
-	Priority   interface{} `json:"priority"`
-	AssignedTo interface{} `json:"assigned_to"`
-	TeamID     interface{} `json:"team_id"`
-	Search     interface{} `json:"search"`
-	Offset     int64       `json:"offset"`
-	Limit      int64       `json:"limit"`
+	TenantID       int64       `json:"tenant_id"`
+	CreatedBy      int64       `json:"created_by"`
+	Status         interface{} `json:"status"`
+	Priority       interface{} `json:"priority"`
+	AssignedTo     interface{} `json:"assigned_to"`
+	TeamID         interface{} `json:"team_id"`
+	Search         interface{} `json:"search"`
+	BreachedBefore interface{} `json:"breached_before"`
+	Offset         int64       `json:"offset"`
+	Limit          int64       `json:"limit"`
 }
 
 func (q *Queries) ListTicketsByCreator(ctx context.Context, arg ListTicketsByCreatorParams) ([]Ticket, error) {
@@ -224,6 +243,7 @@ func (q *Queries) ListTicketsByCreator(ctx context.Context, arg ListTicketsByCre
 		arg.AssignedTo,
 		arg.TeamID,
 		arg.Search,
+		arg.BreachedBefore,
 		arg.Offset,
 		arg.Limit,
 	)
@@ -249,6 +269,9 @@ func (q *Queries) ListTicketsByCreator(ctx context.Context, arg ListTicketsByCre
 			&i.UpdatedAt,
 			&i.ResolvedAt,
 			&i.ClosedAt,
+			&i.FirstResponseDueAt,
+			&i.ResolutionDueAt,
+			&i.FirstRespondedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -264,7 +287,7 @@ func (q *Queries) ListTicketsByCreator(ctx context.Context, arg ListTicketsByCre
 }
 
 const listTicketsByTenant = `-- name: ListTicketsByTenant :many
-SELECT id, tenant_id, title, description, status, priority, category_id, created_by, assigned_to, assigned_team_id, created_at, updated_at, resolved_at, closed_at FROM tickets
+SELECT id, tenant_id, title, description, status, priority, category_id, created_by, assigned_to, assigned_team_id, created_at, updated_at, resolved_at, closed_at, first_response_due_at, resolution_due_at, first_responded_at FROM tickets
 WHERE tenant_id = ?1
   AND (?2 IS NULL OR status = ?2)
   AND (?3 IS NULL OR priority = ?3)
@@ -273,19 +296,25 @@ WHERE tenant_id = ?1
   AND (?6 IS NULL
        OR title LIKE '%' || ?6 || '%'
        OR description LIKE '%' || ?6 || '%')
+  AND (?7 IS NULL OR (
+        (resolution_due_at IS NOT NULL AND resolved_at IS NULL
+         AND resolution_due_at < ?7)
+     OR (first_response_due_at IS NOT NULL AND first_responded_at IS NULL
+         AND first_response_due_at < ?7)))
 ORDER BY created_at DESC, id DESC
-LIMIT ?8 OFFSET ?7
+LIMIT ?9 OFFSET ?8
 `
 
 type ListTicketsByTenantParams struct {
-	TenantID   int64       `json:"tenant_id"`
-	Status     interface{} `json:"status"`
-	Priority   interface{} `json:"priority"`
-	AssignedTo interface{} `json:"assigned_to"`
-	TeamID     interface{} `json:"team_id"`
-	Search     interface{} `json:"search"`
-	Offset     int64       `json:"offset"`
-	Limit      int64       `json:"limit"`
+	TenantID       int64       `json:"tenant_id"`
+	Status         interface{} `json:"status"`
+	Priority       interface{} `json:"priority"`
+	AssignedTo     interface{} `json:"assigned_to"`
+	TeamID         interface{} `json:"team_id"`
+	Search         interface{} `json:"search"`
+	BreachedBefore interface{} `json:"breached_before"`
+	Offset         int64       `json:"offset"`
+	Limit          int64       `json:"limit"`
 }
 
 func (q *Queries) ListTicketsByTenant(ctx context.Context, arg ListTicketsByTenantParams) ([]Ticket, error) {
@@ -296,6 +325,7 @@ func (q *Queries) ListTicketsByTenant(ctx context.Context, arg ListTicketsByTena
 		arg.AssignedTo,
 		arg.TeamID,
 		arg.Search,
+		arg.BreachedBefore,
 		arg.Offset,
 		arg.Limit,
 	)
@@ -321,6 +351,9 @@ func (q *Queries) ListTicketsByTenant(ctx context.Context, arg ListTicketsByTena
 			&i.UpdatedAt,
 			&i.ResolvedAt,
 			&i.ClosedAt,
+			&i.FirstResponseDueAt,
+			&i.ResolutionDueAt,
+			&i.FirstRespondedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -335,34 +368,57 @@ func (q *Queries) ListTicketsByTenant(ctx context.Context, arg ListTicketsByTena
 	return items, nil
 }
 
+const stampFirstResponse = `-- name: StampFirstResponse :exec
+UPDATE tickets
+SET first_responded_at = ?
+WHERE tenant_id = ? AND id = ? AND first_responded_at IS NULL
+`
+
+type StampFirstResponseParams struct {
+	FirstRespondedAt sql.NullTime `json:"first_responded_at"`
+	TenantID         int64        `json:"tenant_id"`
+	ID               int64        `json:"id"`
+}
+
+func (q *Queries) StampFirstResponse(ctx context.Context, arg StampFirstResponseParams) error {
+	_, err := q.db.ExecContext(ctx, stampFirstResponse, arg.FirstRespondedAt, arg.TenantID, arg.ID)
+	return err
+}
+
 const updateTicket = `-- name: UpdateTicket :one
 UPDATE tickets
-SET title            = ?,
-    description      = ?,
-    status           = ?,
-    priority         = ?,
-    category_id      = ?,
-    assigned_to      = ?,
-    assigned_team_id = ?,
-    resolved_at      = ?,
-    closed_at        = ?,
-    updated_at       = CURRENT_TIMESTAMP
+SET title                 = ?,
+    description           = ?,
+    status                = ?,
+    priority              = ?,
+    category_id           = ?,
+    assigned_to           = ?,
+    assigned_team_id      = ?,
+    resolved_at           = ?,
+    closed_at             = ?,
+    first_response_due_at = ?,
+    resolution_due_at     = ?,
+    first_responded_at    = ?,
+    updated_at            = CURRENT_TIMESTAMP
 WHERE tenant_id = ? AND id = ?
-RETURNING id, tenant_id, title, description, status, priority, category_id, created_by, assigned_to, assigned_team_id, created_at, updated_at, resolved_at, closed_at
+RETURNING id, tenant_id, title, description, status, priority, category_id, created_by, assigned_to, assigned_team_id, created_at, updated_at, resolved_at, closed_at, first_response_due_at, resolution_due_at, first_responded_at
 `
 
 type UpdateTicketParams struct {
-	Title          string        `json:"title"`
-	Description    string        `json:"description"`
-	Status         string        `json:"status"`
-	Priority       string        `json:"priority"`
-	CategoryID     int64         `json:"category_id"`
-	AssignedTo     sql.NullInt64 `json:"assigned_to"`
-	AssignedTeamID sql.NullInt64 `json:"assigned_team_id"`
-	ResolvedAt     sql.NullTime  `json:"resolved_at"`
-	ClosedAt       sql.NullTime  `json:"closed_at"`
-	TenantID       int64         `json:"tenant_id"`
-	ID             int64         `json:"id"`
+	Title              string        `json:"title"`
+	Description        string        `json:"description"`
+	Status             string        `json:"status"`
+	Priority           string        `json:"priority"`
+	CategoryID         int64         `json:"category_id"`
+	AssignedTo         sql.NullInt64 `json:"assigned_to"`
+	AssignedTeamID     sql.NullInt64 `json:"assigned_team_id"`
+	ResolvedAt         sql.NullTime  `json:"resolved_at"`
+	ClosedAt           sql.NullTime  `json:"closed_at"`
+	FirstResponseDueAt sql.NullTime  `json:"first_response_due_at"`
+	ResolutionDueAt    sql.NullTime  `json:"resolution_due_at"`
+	FirstRespondedAt   sql.NullTime  `json:"first_responded_at"`
+	TenantID           int64         `json:"tenant_id"`
+	ID                 int64         `json:"id"`
 }
 
 func (q *Queries) UpdateTicket(ctx context.Context, arg UpdateTicketParams) (Ticket, error) {
@@ -376,6 +432,9 @@ func (q *Queries) UpdateTicket(ctx context.Context, arg UpdateTicketParams) (Tic
 		arg.AssignedTeamID,
 		arg.ResolvedAt,
 		arg.ClosedAt,
+		arg.FirstResponseDueAt,
+		arg.ResolutionDueAt,
+		arg.FirstRespondedAt,
 		arg.TenantID,
 		arg.ID,
 	)
@@ -395,6 +454,9 @@ func (q *Queries) UpdateTicket(ctx context.Context, arg UpdateTicketParams) (Tic
 		&i.UpdatedAt,
 		&i.ResolvedAt,
 		&i.ClosedAt,
+		&i.FirstResponseDueAt,
+		&i.ResolutionDueAt,
+		&i.FirstRespondedAt,
 	)
 	return i, err
 }

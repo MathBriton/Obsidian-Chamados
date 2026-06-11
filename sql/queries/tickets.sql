@@ -1,6 +1,9 @@
 -- name: CreateTicket :one
-INSERT INTO tickets (tenant_id, title, description, status, priority, category_id, created_by)
-VALUES (?, ?, ?, ?, ?, ?, ?)
+INSERT INTO tickets (
+    tenant_id, title, description, status, priority, category_id, created_by,
+    first_response_due_at, resolution_due_at
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: GetTicketByID :one
@@ -18,6 +21,11 @@ WHERE tenant_id = sqlc.arg('tenant_id')
   AND (sqlc.narg('search') IS NULL
        OR title LIKE '%' || sqlc.narg('search') || '%'
        OR description LIKE '%' || sqlc.narg('search') || '%')
+  AND (sqlc.narg('breached_before') IS NULL OR (
+        (resolution_due_at IS NOT NULL AND resolved_at IS NULL
+         AND resolution_due_at < sqlc.narg('breached_before'))
+     OR (first_response_due_at IS NOT NULL AND first_responded_at IS NULL
+         AND first_response_due_at < sqlc.narg('breached_before'))))
 ORDER BY created_at DESC, id DESC
 LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
 
@@ -31,6 +39,11 @@ WHERE tenant_id = sqlc.arg('tenant_id') AND created_by = sqlc.arg('created_by')
   AND (sqlc.narg('search') IS NULL
        OR title LIKE '%' || sqlc.narg('search') || '%'
        OR description LIKE '%' || sqlc.narg('search') || '%')
+  AND (sqlc.narg('breached_before') IS NULL OR (
+        (resolution_due_at IS NOT NULL AND resolved_at IS NULL
+         AND resolution_due_at < sqlc.narg('breached_before'))
+     OR (first_response_due_at IS NOT NULL AND first_responded_at IS NULL
+         AND first_response_due_at < sqlc.narg('breached_before'))))
 ORDER BY created_at DESC, id DESC
 LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
 
@@ -55,15 +68,23 @@ WHERE tenant_id = sqlc.arg('tenant_id')
 
 -- name: UpdateTicket :one
 UPDATE tickets
-SET title            = ?,
-    description      = ?,
-    status           = ?,
-    priority         = ?,
-    category_id      = ?,
-    assigned_to      = ?,
-    assigned_team_id = ?,
-    resolved_at      = ?,
-    closed_at        = ?,
-    updated_at       = CURRENT_TIMESTAMP
+SET title                 = ?,
+    description           = ?,
+    status                = ?,
+    priority              = ?,
+    category_id           = ?,
+    assigned_to           = ?,
+    assigned_team_id      = ?,
+    resolved_at           = ?,
+    closed_at             = ?,
+    first_response_due_at = ?,
+    resolution_due_at     = ?,
+    first_responded_at    = ?,
+    updated_at            = CURRENT_TIMESTAMP
 WHERE tenant_id = ? AND id = ?
 RETURNING *;
+
+-- name: StampFirstResponse :exec
+UPDATE tickets
+SET first_responded_at = ?
+WHERE tenant_id = ? AND id = ? AND first_responded_at IS NULL;

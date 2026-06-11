@@ -2,6 +2,8 @@ package repositories
 
 import (
 	"context"
+	"database/sql"
+	"time"
 
 	"github.com/MathBriton/Obsidian-Chamados/internal/db"
 )
@@ -14,25 +16,30 @@ type TicketRepository struct {
 // CreateTicketInput agrega os dados para abrir um ticket. status e priority já
 // chegam validados/normalizados pela camada de service.
 type CreateTicketInput struct {
-	TenantID    int64
-	Title       string
-	Description string
-	Status      string
-	Priority    string
-	CategoryID  int64
-	CreatedBy   int64
+	TenantID           int64
+	Title              string
+	Description        string
+	Status             string
+	Priority           string
+	CategoryID         int64
+	CreatedBy          int64
+	FirstResponseDueAt sql.NullTime
+	ResolutionDueAt    sql.NullTime
 }
 
-// Create abre um ticket no tenant.
+// Create abre um ticket no tenant. Os prazos de SLA já chegam calculados pela
+// camada de service (nulos quando a prioridade não tem política).
 func (r *TicketRepository) Create(ctx context.Context, in CreateTicketInput) (db.Ticket, error) {
 	return r.q.CreateTicket(ctx, db.CreateTicketParams{
-		TenantID:    in.TenantID,
-		Title:       in.Title,
-		Description: in.Description,
-		Status:      in.Status,
-		Priority:    in.Priority,
-		CategoryID:  in.CategoryID,
-		CreatedBy:   in.CreatedBy,
+		TenantID:           in.TenantID,
+		Title:              in.Title,
+		Description:        in.Description,
+		Status:             in.Status,
+		Priority:           in.Priority,
+		CategoryID:         in.CategoryID,
+		CreatedBy:          in.CreatedBy,
+		FirstResponseDueAt: in.FirstResponseDueAt,
+		ResolutionDueAt:    in.ResolutionDueAt,
 	})
 }
 
@@ -53,20 +60,24 @@ type TicketFilter struct {
 	AssignedTo *int64
 	TeamID     *int64
 	Search     *string
+	// BreachedBefore, quando não-nil, restringe aos tickets com SLA estourado
+	// (resposta ou resolução vencida e não cumprida) em relação a esse instante.
+	BreachedBefore *time.Time
 }
 
 // ListByTenant lista todos os tickets do tenant, filtrado e paginado (visão de
 // agent/admin).
 func (r *TicketRepository) ListByTenant(ctx context.Context, tenantID int64, f TicketFilter, limit, offset int64) ([]db.Ticket, error) {
 	return r.q.ListTicketsByTenant(ctx, db.ListTicketsByTenantParams{
-		TenantID:   tenantID,
-		Status:     nullable(f.Status),
-		Priority:   nullable(f.Priority),
-		AssignedTo: nullable(f.AssignedTo),
-		TeamID:     nullable(f.TeamID),
-		Search:     nullable(f.Search),
-		Limit:      limit,
-		Offset:     offset,
+		TenantID:       tenantID,
+		Status:         nullable(f.Status),
+		Priority:       nullable(f.Priority),
+		AssignedTo:     nullable(f.AssignedTo),
+		TeamID:         nullable(f.TeamID),
+		Search:         nullable(f.Search),
+		BreachedBefore: nullable(f.BreachedBefore),
+		Limit:          limit,
+		Offset:         offset,
 	})
 }
 
@@ -74,15 +85,16 @@ func (r *TicketRepository) ListByTenant(ctx context.Context, tenantID int64, f T
 // paginado (visão de customer).
 func (r *TicketRepository) ListByCreator(ctx context.Context, tenantID, createdBy int64, f TicketFilter, limit, offset int64) ([]db.Ticket, error) {
 	return r.q.ListTicketsByCreator(ctx, db.ListTicketsByCreatorParams{
-		TenantID:   tenantID,
-		CreatedBy:  createdBy,
-		Status:     nullable(f.Status),
-		Priority:   nullable(f.Priority),
-		AssignedTo: nullable(f.AssignedTo),
-		TeamID:     nullable(f.TeamID),
-		Search:     nullable(f.Search),
-		Limit:      limit,
-		Offset:     offset,
+		TenantID:       tenantID,
+		CreatedBy:      createdBy,
+		Status:         nullable(f.Status),
+		Priority:       nullable(f.Priority),
+		AssignedTo:     nullable(f.AssignedTo),
+		TeamID:         nullable(f.TeamID),
+		Search:         nullable(f.Search),
+		BreachedBefore: nullable(f.BreachedBefore),
+		Limit:          limit,
+		Offset:         offset,
 	})
 }
 
@@ -142,20 +154,34 @@ func (r *TicketRepository) Stats(ctx context.Context, tenantID int64, createdBy 
 // filtro por tenant_id garante o isolamento mesmo no UPDATE.
 func (r *TicketRepository) Update(ctx context.Context, t db.Ticket) (db.Ticket, error) {
 	updated, err := r.q.UpdateTicket(ctx, db.UpdateTicketParams{
-		Title:          t.Title,
-		Description:    t.Description,
-		Status:         t.Status,
-		Priority:       t.Priority,
-		CategoryID:     t.CategoryID,
-		AssignedTo:     t.AssignedTo,
-		AssignedTeamID: t.AssignedTeamID,
-		ResolvedAt:     t.ResolvedAt,
-		ClosedAt:       t.ClosedAt,
-		TenantID:       t.TenantID,
-		ID:             t.ID,
+		Title:              t.Title,
+		Description:        t.Description,
+		Status:             t.Status,
+		Priority:           t.Priority,
+		CategoryID:         t.CategoryID,
+		AssignedTo:         t.AssignedTo,
+		AssignedTeamID:     t.AssignedTeamID,
+		ResolvedAt:         t.ResolvedAt,
+		ClosedAt:           t.ClosedAt,
+		FirstResponseDueAt: t.FirstResponseDueAt,
+		ResolutionDueAt:    t.ResolutionDueAt,
+		FirstRespondedAt:   t.FirstRespondedAt,
+		TenantID:           t.TenantID,
+		ID:                 t.ID,
 	})
 	if err != nil {
 		return db.Ticket{}, notFound(err)
 	}
 	return updated, nil
+}
+
+// StampFirstResponse carimba o instante da primeira resposta de um ticket, de
+// forma idempotente: o UPDATE só toca a linha quando first_responded_at ainda é
+// nulo (guarda contra dupla marcação).
+func (r *TicketRepository) StampFirstResponse(ctx context.Context, tenantID, ticketID int64, at time.Time) error {
+	return r.q.StampFirstResponse(ctx, db.StampFirstResponseParams{
+		FirstRespondedAt: sql.NullTime{Time: at, Valid: true},
+		TenantID:         tenantID,
+		ID:               ticketID,
+	})
 }

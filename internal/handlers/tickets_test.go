@@ -36,6 +36,7 @@ func newEnv(t *testing.T) env {
 		services.NewTicketService(store),
 		services.NewUserService(store),
 		services.NewTeamService(store),
+		services.NewSLAService(store),
 		tm,
 	)
 	return env{r: h.Router(), store: store, tokens: tm}

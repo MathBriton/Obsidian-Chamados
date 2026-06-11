@@ -81,17 +81,26 @@ func (s *TicketService) Create(ctx context.Context, actor Actor, in CreateTicket
 		priority = "medium"
 	}
 
+	// Prazos de SLA a partir da abertura. Sem política para a prioridade, os
+	// prazos ficam nulos (estado "none").
+	frDue, resDue, err := s.slaDueDatesFor(ctx, actor.TenantID, priority, time.Now().UTC())
+	if err != nil {
+		return db.Ticket{}, err
+	}
+
 	var ticket db.Ticket
-	err := s.store.ExecTx(ctx, func(r *repositories.Repositories) error {
+	err = s.store.ExecTx(ctx, func(r *repositories.Repositories) error {
 		var err error
 		ticket, err = r.Tickets.Create(ctx, repositories.CreateTicketInput{
-			TenantID:    actor.TenantID,
-			Title:       in.Title,
-			Description: in.Description,
-			Status:      "open",
-			Priority:    priority,
-			CategoryID:  in.CategoryID,
-			CreatedBy:   actor.UserID,
+			TenantID:           actor.TenantID,
+			Title:              in.Title,
+			Description:        in.Description,
+			Status:             "open",
+			Priority:           priority,
+			CategoryID:         in.CategoryID,
+			CreatedBy:          actor.UserID,
+			FirstResponseDueAt: frDue,
+			ResolutionDueAt:    resDue,
 		})
 		if err != nil {
 			return err
@@ -194,6 +203,15 @@ func (s *TicketService) Update(ctx context.Context, actor Actor, id int64, in Up
 	if in.Priority != nil && *in.Priority != ticket.Priority {
 		record(eventPriorityChanged, ptr(ticket.Priority), in.Priority)
 		ticket.Priority = *in.Priority
+		// Recalcula os prazos de SLA sobre a abertura com a nova política
+		// (sem política => prazos nulos). A primeira resposta já dada é
+		// preservada.
+		frDue, resDue, err := s.slaDueDatesFor(ctx, actor.TenantID, ticket.Priority, ticket.CreatedAt)
+		if err != nil {
+			return db.Ticket{}, err
+		}
+		ticket.FirstResponseDueAt = frDue
+		ticket.ResolutionDueAt = resDue
 	}
 	if in.CategoryID != nil && *in.CategoryID != ticket.CategoryID {
 		newCat, err := s.store.Categories.GetByID(ctx, actor.TenantID, *in.CategoryID)
@@ -281,6 +299,21 @@ func (s *TicketService) teamName(ctx context.Context, tenantID, id int64) string
 	return fmt.Sprintf("#%d", id)
 }
 
+// slaDueDatesFor busca a política de SLA da prioridade e calcula os prazos a
+// partir da base (abertura do ticket). Sem política, devolve prazos nulos
+// (ticket sem SLA) — não é erro.
+func (s *TicketService) slaDueDatesFor(ctx context.Context, tenantID int64, priority string, base time.Time) (firstResponse, resolution sql.NullTime, err error) {
+	policy, err := s.store.SLA.GetByPriority(ctx, tenantID, priority)
+	if err != nil {
+		if errors.Is(err, models.ErrNotFound) {
+			return sql.NullTime{}, sql.NullTime{}, nil
+		}
+		return sql.NullTime{}, sql.NullTime{}, err
+	}
+	firstResponse, resolution = slaDueDates(policy, base)
+	return firstResponse, resolution, nil
+}
+
 // ptr devolve um ponteiro para o valor (atalho para montar eventos).
 func ptr(s string) *string { return &s }
 
@@ -288,18 +321,35 @@ func ptr(s string) *string { return &s }
 // ticket (customer só nos próprios, senão 404). Notas internas (is_internal)
 // só podem ser criadas por staff; um customer que tente isso recebe 403.
 func (s *TicketService) AddComment(ctx context.Context, actor Actor, ticketID int64, body string, internal bool) (repositories.CommentWithAuthor, error) {
-	if _, err := s.Get(ctx, actor, ticketID); err != nil {
+	ticket, err := s.Get(ctx, actor, ticketID)
+	if err != nil {
 		return repositories.CommentWithAuthor{}, err
 	}
 	if internal && !actor.isStaff() {
 		return repositories.CommentWithAuthor{}, models.ErrForbidden
 	}
-	comment, err := s.store.Comments.Create(ctx, repositories.CreateCommentInput{
-		TenantID:   actor.TenantID,
-		TicketID:   ticketID,
-		AuthorID:   actor.UserID,
-		Body:       body,
-		IsInternal: internal,
+
+	// Primeira resposta do SLA: primeiro comentário público de staff. Notas
+	// internas não contam e a marcação é idempotente (só carimba se ainda nulo).
+	stampFirstResponse := actor.isStaff() && !internal && !ticket.FirstRespondedAt.Valid
+
+	var comment db.Comment
+	err = s.store.ExecTx(ctx, func(r *repositories.Repositories) error {
+		var err error
+		comment, err = r.Comments.Create(ctx, repositories.CreateCommentInput{
+			TenantID:   actor.TenantID,
+			TicketID:   ticketID,
+			AuthorID:   actor.UserID,
+			Body:       body,
+			IsInternal: internal,
+		})
+		if err != nil {
+			return err
+		}
+		if stampFirstResponse {
+			return r.Tickets.StampFirstResponse(ctx, actor.TenantID, ticketID, time.Now().UTC())
+		}
+		return nil
 	})
 	if err != nil {
 		return repositories.CommentWithAuthor{}, err

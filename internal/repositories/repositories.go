@@ -17,6 +17,7 @@ type Repositories struct {
 	Comments   *CommentRepository
 	Teams      *TeamRepository
 	Events     *TicketEventRepository
+	SLA        *SLARepository
 }
 
 // New monta os repositórios sobre um db.Querier (pool ou transação).
@@ -30,5 +31,6 @@ func New(q db.Querier) *Repositories {
 		Comments:   &CommentRepository{q: q},
 		Teams:      &TeamRepository{q: q},
 		Events:     &TicketEventRepository{q: q},
+		SLA:        &SLARepository{q: q},
 	}
 }
