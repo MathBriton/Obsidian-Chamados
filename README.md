@@ -163,7 +163,7 @@ Testes de integração usam SQLite em memória (RNF10) — não tocam o banco re
 
 ## Frontend (`web/`)
 
-SPA em **React + TypeScript + Tailwind CSS v4**, com Vite, React Router e Vitest. Por enquanto cobre a autenticação (login, registro, sessão persistida e logout) consumindo a API.
+SPA em **React + TypeScript + Tailwind CSS v4**, com Vite, React Router e Vitest. Cobre autenticação (login, registro, sessão persistida e logout), dashboard de chamados com filtros e busca, abertura/detalhe de tickets com comentários e atribuição de responsável, além das telas de administração de usuários e categorias (admin).
 
 ```bash
 cd web
