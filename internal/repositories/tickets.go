@@ -92,6 +92,49 @@ func nullable[T any](p *T) interface{} {
 	return *p
 }
 
+// TicketStats agrega as contagens de tickets de um escopo (tenant inteiro ou
+// apenas os criados por um usuário). Mapas trazem só as chaves com ocorrência;
+// o zero-fill dos enums fica na camada de apresentação.
+type TicketStats struct {
+	ByStatus         map[string]int64
+	ByPriority       map[string]int64
+	UnassignedActive int64
+}
+
+// Stats calcula as contagens de tickets do tenant. Com createdBy não-nil, o
+// escopo é restrito aos tickets criados por esse usuário (visão de customer).
+func (r *TicketRepository) Stats(ctx context.Context, tenantID int64, createdBy *int64) (TicketStats, error) {
+	stats := TicketStats{ByStatus: map[string]int64{}, ByPriority: map[string]int64{}}
+
+	byStatus, err := r.q.CountTicketsByStatus(ctx, db.CountTicketsByStatusParams{
+		TenantID: tenantID, CreatedBy: nullable(createdBy),
+	})
+	if err != nil {
+		return TicketStats{}, err
+	}
+	for _, row := range byStatus {
+		stats.ByStatus[row.Status] = row.Total
+	}
+
+	byPriority, err := r.q.CountTicketsByPriority(ctx, db.CountTicketsByPriorityParams{
+		TenantID: tenantID, CreatedBy: nullable(createdBy),
+	})
+	if err != nil {
+		return TicketStats{}, err
+	}
+	for _, row := range byPriority {
+		stats.ByPriority[row.Priority] = row.Total
+	}
+
+	stats.UnassignedActive, err = r.q.CountUnassignedActiveTickets(ctx, db.CountUnassignedActiveTicketsParams{
+		TenantID: tenantID, CreatedBy: nullable(createdBy),
+	})
+	if err != nil {
+		return TicketStats{}, err
+	}
+	return stats, nil
+}
+
 // Update persiste o ticket inteiro (read-modify-write feito no service). O
 // filtro por tenant_id garante o isolamento mesmo no UPDATE.
 func (r *TicketRepository) Update(ctx context.Context, t db.Ticket) (db.Ticket, error) {

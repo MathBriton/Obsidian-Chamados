@@ -29,6 +29,9 @@ export function Layout() {
               <NavLink to="/" end className={navClass}>
                 Chamados
               </NavLink>
+              <NavLink to="/dashboard" className={navClass}>
+                Dashboard
+              </NavLink>
               {isAdmin && (
                 <NavLink to="/users" className={navClass}>
                   Usuários

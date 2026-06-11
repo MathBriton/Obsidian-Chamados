@@ -32,6 +32,25 @@ WHERE tenant_id = sqlc.arg('tenant_id') AND created_by = sqlc.arg('created_by')
 ORDER BY created_at DESC, id DESC
 LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
 
+-- name: CountTicketsByStatus :many
+SELECT status, COUNT(*) AS total FROM tickets
+WHERE tenant_id = sqlc.arg('tenant_id')
+  AND (sqlc.narg('created_by') IS NULL OR created_by = sqlc.narg('created_by'))
+GROUP BY status;
+
+-- name: CountTicketsByPriority :many
+SELECT priority, COUNT(*) AS total FROM tickets
+WHERE tenant_id = sqlc.arg('tenant_id')
+  AND (sqlc.narg('created_by') IS NULL OR created_by = sqlc.narg('created_by'))
+GROUP BY priority;
+
+-- name: CountUnassignedActiveTickets :one
+SELECT COUNT(*) FROM tickets
+WHERE tenant_id = sqlc.arg('tenant_id')
+  AND (sqlc.narg('created_by') IS NULL OR created_by = sqlc.narg('created_by'))
+  AND assigned_to IS NULL
+  AND status NOT IN ('resolved', 'closed');
+
 -- name: UpdateTicket :one
 UPDATE tickets
 SET title            = ?,

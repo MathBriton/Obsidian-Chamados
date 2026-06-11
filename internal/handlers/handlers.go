@@ -77,6 +77,9 @@ func (h *Handler) Router() *gin.Engine {
 		// Usuários atribuíveis (staff): admin e agent podem atribuir chamados.
 		api.GET("/assignees", middleware.RequireRole(services.RoleAdmin, services.RoleAgent), h.ListAssignees)
 
+		// Métricas de tickets no escopo de visibilidade do papel.
+		api.GET("/stats", h.GetStats)
+
 		api.POST("/tickets", h.CreateTicket)
 		api.GET("/tickets", h.ListTickets)
 		api.GET("/tickets/:id", h.GetTicket)

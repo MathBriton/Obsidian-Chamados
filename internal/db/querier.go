@@ -9,6 +9,9 @@ import (
 )
 
 type Querier interface {
+	CountTicketsByPriority(ctx context.Context, arg CountTicketsByPriorityParams) ([]CountTicketsByPriorityRow, error)
+	CountTicketsByStatus(ctx context.Context, arg CountTicketsByStatusParams) ([]CountTicketsByStatusRow, error)
+	CountUnassignedActiveTickets(ctx context.Context, arg CountUnassignedActiveTicketsParams) (int64, error)
 	CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error)
 	CreateComment(ctx context.Context, arg CreateCommentParams) (Comment, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)

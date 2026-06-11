@@ -113,6 +113,9 @@ curl http://localhost:8080/healthz
 | `PATCH`| `/tickets/:id` | Bearer | Atualização parcial |
 | `POST` | `/tickets/:id/comments` | Bearer | Comenta no ticket (`is_internal` só staff) |
 | `GET`  | `/tickets/:id/comments` | Bearer | Lista comentários (customer não vê notas internas) |
+| `GET`  | `/stats` | Bearer | Métricas de tickets (total, por status/prioridade, ativos sem responsável) |
+
+**Métricas:** `GET /stats` resume os tickets no mesmo escopo de visibilidade da listagem — staff vê o tenant inteiro, customer só os próprios. Os mapas `by_status`/`by_priority` vêm zero-preenchidos com todos os valores dos enums.
 
 **Filtros de listagem:** `GET /tickets` aceita `status`, `priority`, `assigned_to` e `q` (busca por substring em título/descrição, case-insensitive), combináveis entre si e com a paginação. Valores fora dos enums respondem **400**. Os filtros atuam dentro do escopo de visibilidade do papel — um `customer` nunca amplia o que enxerga filtrando.
 
@@ -163,7 +166,7 @@ Testes de integração usam SQLite em memória (RNF10) — não tocam o banco re
 
 ## Frontend (`web/`)
 
-SPA em **React + TypeScript + Tailwind CSS v4**, com Vite, React Router e Vitest. Cobre autenticação (login, registro, sessão persistida e logout), dashboard de chamados com filtros e busca, abertura/detalhe de tickets com comentários e atribuição de responsável, além das telas de administração de usuários e categorias (admin).
+SPA em **React + TypeScript + Tailwind CSS v4**, com Vite, React Router e Vitest. Cobre autenticação (login, registro, sessão persistida e logout), listagem de chamados com filtros e busca, abertura/detalhe de tickets com comentários e atribuição de responsável, dashboard de métricas (cards e distribuição por status/prioridade), além das telas de administração de usuários e categorias (admin).
 
 ```bash
 cd web
@@ -172,7 +175,7 @@ npm install
 npm run dev            # http://localhost:5173
 ```
 
-Em desenvolvimento, o Vite faz **proxy** das rotas da API (`/auth`, `/me`, `/tickets`, `/categories`) para `http://localhost:8080`, então basta ter o backend rodando em paralelo — sem CORS. Em produção, defina `VITE_API_URL` apontando para a API.
+Em desenvolvimento, o Vite faz **proxy** das rotas da API (`/auth`, `/me`, `/tickets`, `/categories`, `/users`, `/assignees`, `/stats`) para `http://localhost:8080`, então basta ter o backend rodando em paralelo — sem CORS. Em produção, defina `VITE_API_URL` apontando para a API.
 
 ```bash
 npm test               # Vitest + React Testing Library

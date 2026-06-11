@@ -180,6 +180,23 @@ definitions:
     - slug
     - tenant_name
     type: object
+  internal_handlers.statsResponse:
+    properties:
+      by_priority:
+        additionalProperties:
+          format: int64
+          type: integer
+        type: object
+      by_status:
+        additionalProperties:
+          format: int64
+          type: integer
+        type: object
+      total:
+        type: integer
+      unassigned_active:
+        type: integer
+    type: object
   internal_handlers.tenantResponse:
     properties:
       id:
@@ -490,6 +507,24 @@ paths:
       summary: Usuário autenticado
       tags:
       - auth
+  /stats:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handlers.statsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      security:
+      - Bearer: []
+      summary: Métricas de tickets (escopo do papel)
+      tags:
+      - tickets
   /tickets:
     get:
       parameters:

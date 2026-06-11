@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 // Rotas da API Go que o dev server faz proxy para o backend, evitando CORS.
-const apiRoutes = ['/auth', '/me', '/tickets', '/categories', '/users', '/healthz']
+const apiRoutes = ['/auth', '/me', '/tickets', '/categories', '/users', '/assignees', '/stats', '/healthz']
 
 // https://vite.dev/config/
 export default defineConfig({

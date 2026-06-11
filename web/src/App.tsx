@@ -8,6 +8,7 @@ import { NewTicketPage } from './pages/NewTicketPage'
 import { TicketDetailPage } from './pages/TicketDetailPage'
 import { UsersPage } from './pages/UsersPage'
 import { CategoriesPage } from './pages/CategoriesPage'
+import { DashboardPage } from './pages/DashboardPage'
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
           <Route path="/" element={<TicketsPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/tickets/new" element={<NewTicketPage />} />
           <Route path="/tickets/:id" element={<TicketDetailPage />} />
           <Route path="/users" element={<UsersPage />} />

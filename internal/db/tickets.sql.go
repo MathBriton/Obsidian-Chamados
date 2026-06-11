@@ -10,6 +10,106 @@ import (
 	"database/sql"
 )
 
+const countTicketsByPriority = `-- name: CountTicketsByPriority :many
+SELECT priority, COUNT(*) AS total FROM tickets
+WHERE tenant_id = ?1
+  AND (?2 IS NULL OR created_by = ?2)
+GROUP BY priority
+`
+
+type CountTicketsByPriorityParams struct {
+	TenantID  int64       `json:"tenant_id"`
+	CreatedBy interface{} `json:"created_by"`
+}
+
+type CountTicketsByPriorityRow struct {
+	Priority string `json:"priority"`
+	Total    int64  `json:"total"`
+}
+
+func (q *Queries) CountTicketsByPriority(ctx context.Context, arg CountTicketsByPriorityParams) ([]CountTicketsByPriorityRow, error) {
+	rows, err := q.db.QueryContext(ctx, countTicketsByPriority, arg.TenantID, arg.CreatedBy)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CountTicketsByPriorityRow{}
+	for rows.Next() {
+		var i CountTicketsByPriorityRow
+		if err := rows.Scan(&i.Priority, &i.Total); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const countTicketsByStatus = `-- name: CountTicketsByStatus :many
+SELECT status, COUNT(*) AS total FROM tickets
+WHERE tenant_id = ?1
+  AND (?2 IS NULL OR created_by = ?2)
+GROUP BY status
+`
+
+type CountTicketsByStatusParams struct {
+	TenantID  int64       `json:"tenant_id"`
+	CreatedBy interface{} `json:"created_by"`
+}
+
+type CountTicketsByStatusRow struct {
+	Status string `json:"status"`
+	Total  int64  `json:"total"`
+}
+
+func (q *Queries) CountTicketsByStatus(ctx context.Context, arg CountTicketsByStatusParams) ([]CountTicketsByStatusRow, error) {
+	rows, err := q.db.QueryContext(ctx, countTicketsByStatus, arg.TenantID, arg.CreatedBy)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CountTicketsByStatusRow{}
+	for rows.Next() {
+		var i CountTicketsByStatusRow
+		if err := rows.Scan(&i.Status, &i.Total); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const countUnassignedActiveTickets = `-- name: CountUnassignedActiveTickets :one
+SELECT COUNT(*) FROM tickets
+WHERE tenant_id = ?1
+  AND (?2 IS NULL OR created_by = ?2)
+  AND assigned_to IS NULL
+  AND status NOT IN ('resolved', 'closed')
+`
+
+type CountUnassignedActiveTicketsParams struct {
+	TenantID  int64       `json:"tenant_id"`
+	CreatedBy interface{} `json:"created_by"`
+}
+
+func (q *Queries) CountUnassignedActiveTickets(ctx context.Context, arg CountUnassignedActiveTicketsParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countUnassignedActiveTickets, arg.TenantID, arg.CreatedBy)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createTicket = `-- name: CreateTicket :one
 INSERT INTO tickets (tenant_id, title, description, status, priority, category_id, created_by)
 VALUES (?, ?, ?, ?, ?, ?, ?)

@@ -110,6 +110,16 @@ func (s *TicketService) List(ctx context.Context, actor Actor, f repositories.Ti
 	return s.store.Tickets.ListByCreator(ctx, actor.TenantID, actor.UserID, f, limit, offset)
 }
 
+// Stats devolve as contagens de tickets visíveis ao actor, no mesmo escopo de
+// visibilidade da listagem: todo o tenant para staff, apenas os próprios para
+// customer.
+func (s *TicketService) Stats(ctx context.Context, actor Actor) (repositories.TicketStats, error) {
+	if actor.isStaff() {
+		return s.store.Tickets.Stats(ctx, actor.TenantID, nil)
+	}
+	return s.store.Tickets.Stats(ctx, actor.TenantID, &actor.UserID)
+}
+
 // UpdateTicketInput descreve uma atualização parcial: campos nil ficam
 // inalterados. Distinguir "não informado" de "valor zero" exige ponteiros.
 type UpdateTicketInput struct {

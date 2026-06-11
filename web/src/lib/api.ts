@@ -102,6 +102,14 @@ export interface CreateTicketInput {
   priority?: TicketPriority
 }
 
+/** Contagens de tickets no escopo de visibilidade do papel (GET /stats). */
+export interface TicketStats {
+  total: number
+  unassigned_active: number
+  by_status: Record<TicketStatus, number>
+  by_priority: Record<TicketPriority, number>
+}
+
 /** Filtros opcionais da listagem de tickets; combináveis entre si. */
 export interface TicketFilter {
   status?: TicketStatus
@@ -196,6 +204,7 @@ export const api = {
     return request<{ tickets: Ticket[] }>(`/tickets${qs ? `?${qs}` : ''}`, { token }).then((r) => r.tickets)
   },
   getTicket: (token: string, id: number) => request<Ticket>(`/tickets/${id}`, { token }),
+  getStats: (token: string) => request<TicketStats>('/stats', { token }),
   createTicket: (token: string, input: CreateTicketInput) =>
     request<Ticket>('/tickets', { method: 'POST', body: input, token }),
   updateTicket: (token: string, id: number, input: UpdateTicketInput) =>
