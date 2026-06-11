@@ -26,6 +26,17 @@ type Comment struct {
 	CreatedAt  time.Time `json:"created_at"`
 }
 
+type Notification struct {
+	ID        int64        `json:"id"`
+	TenantID  int64        `json:"tenant_id"`
+	UserID    int64        `json:"user_id"`
+	TicketID  int64        `json:"ticket_id"`
+	Kind      string       `json:"kind"`
+	Message   string       `json:"message"`
+	ReadAt    sql.NullTime `json:"read_at"`
+	CreatedAt time.Time    `json:"created_at"`
+}
+
 type RefreshToken struct {
 	ID        int64        `json:"id"`
 	TenantID  int64        `json:"tenant_id"`

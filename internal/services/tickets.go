@@ -333,6 +333,12 @@ func (s *TicketService) AddComment(ctx context.Context, actor Actor, ticketID in
 	// internas não contam e a marcação é idempotente (só carimba se ainda nulo).
 	stampFirstResponse := actor.isStaff() && !internal && !ticket.FirstRespondedAt.Valid
 
+	// Notificações in-app só para comentários públicos. Calcula autor e
+	// destinatários fora da transação (leituras), grava dentro dela.
+	authorName := s.userName(ctx, actor.TenantID, actor.UserID)
+	recipients := commentRecipients(actor.UserID, ticket, internal)
+	message := fmt.Sprintf("%s comentou no chamado #%d", authorName, ticketID)
+
 	var comment db.Comment
 	err = s.store.ExecTx(ctx, func(r *repositories.Repositories) error {
 		var err error
@@ -347,14 +353,46 @@ func (s *TicketService) AddComment(ctx context.Context, actor Actor, ticketID in
 			return err
 		}
 		if stampFirstResponse {
-			return r.Tickets.StampFirstResponse(ctx, actor.TenantID, ticketID, time.Now().UTC())
+			if err := r.Tickets.StampFirstResponse(ctx, actor.TenantID, ticketID, time.Now().UTC()); err != nil {
+				return err
+			}
+		}
+		for _, uid := range recipients {
+			if _, err := r.Notifications.Create(ctx, repositories.CreateNotificationInput{
+				TenantID: actor.TenantID, UserID: uid, TicketID: ticketID,
+				Kind: notifyKindComment, Message: message,
+			}); err != nil {
+				return err
+			}
 		}
 		return nil
 	})
 	if err != nil {
 		return repositories.CommentWithAuthor{}, err
 	}
-	return repositories.CommentWithAuthor{Comment: comment, AuthorName: s.userName(ctx, actor.TenantID, actor.UserID)}, nil
+	return repositories.CommentWithAuthor{Comment: comment, AuthorName: authorName}, nil
+}
+
+// commentRecipients devolve os destinatários de notificação de um comentário
+// público: criador e responsável do ticket, exceto o próprio autor (sem
+// duplicar quando coincidem). Notas internas não notificam ninguém (MVP).
+func commentRecipients(authorID int64, ticket db.Ticket, internal bool) []int64 {
+	if internal {
+		return nil
+	}
+	var out []int64
+	seen := map[int64]bool{authorID: true}
+	add := func(uid int64) {
+		if !seen[uid] {
+			seen[uid] = true
+			out = append(out, uid)
+		}
+	}
+	add(ticket.CreatedBy)
+	if ticket.AssignedTo.Valid {
+		add(ticket.AssignedTo.Int64)
+	}
+	return out
 }
 
 // ListComments devolve os comentários visíveis de um ticket. Exige visibilidade

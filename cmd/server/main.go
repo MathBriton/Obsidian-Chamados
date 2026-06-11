@@ -21,7 +21,7 @@ import (
 )
 
 // @title           Obsidian Chamados API
-// @version         0.4.0
+// @version         0.5.0
 // @description     SaaS multi-tenant de gestão de chamados (help desk / service desk).
 // @description     Autenticação via Bearer JWT: obtenha o access_token em /auth/register ou /auth/login e informe-o em "Authorize".
 // @BasePath        /
@@ -57,7 +57,8 @@ func run() error {
 	userService := services.NewUserService(store)
 	teamService := services.NewTeamService(store)
 	slaService := services.NewSLAService(store)
-	router := handlers.New(authService, categoryService, ticketService, userService, teamService, slaService, tokens).Router()
+	notificationService := services.NewNotificationService(store)
+	router := handlers.New(authService, categoryService, ticketService, userService, teamService, slaService, notificationService, tokens).Router()
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,

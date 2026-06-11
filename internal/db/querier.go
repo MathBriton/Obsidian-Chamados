@@ -13,8 +13,10 @@ type Querier interface {
 	CountTicketsByPriority(ctx context.Context, arg CountTicketsByPriorityParams) ([]CountTicketsByPriorityRow, error)
 	CountTicketsByStatus(ctx context.Context, arg CountTicketsByStatusParams) ([]CountTicketsByStatusRow, error)
 	CountUnassignedActiveTickets(ctx context.Context, arg CountUnassignedActiveTicketsParams) (int64, error)
+	CountUnreadNotifications(ctx context.Context, arg CountUnreadNotificationsParams) (int64, error)
 	CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error)
 	CreateComment(ctx context.Context, arg CreateCommentParams) (Comment, error)
+	CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
 	CreateTeam(ctx context.Context, arg CreateTeamParams) (Team, error)
 	CreateTenant(ctx context.Context, arg CreateTenantParams) (Tenant, error)
@@ -23,6 +25,7 @@ type Querier interface {
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeactivateUser(ctx context.Context, arg DeactivateUserParams) error
 	GetCategoryByID(ctx context.Context, arg GetCategoryByIDParams) (Category, error)
+	GetNotificationByID(ctx context.Context, arg GetNotificationByIDParams) (Notification, error)
 	GetRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
 	GetSLAPolicyByPriority(ctx context.Context, arg GetSLAPolicyByPriorityParams) (SlaPolicy, error)
 	GetTeamByID(ctx context.Context, arg GetTeamByIDParams) (Team, error)
@@ -34,6 +37,7 @@ type Querier interface {
 	ListAssignableUsers(ctx context.Context, tenantID int64) ([]User, error)
 	ListCategoriesByTenant(ctx context.Context, tenantID int64) ([]Category, error)
 	ListCommentsByTicket(ctx context.Context, arg ListCommentsByTicketParams) ([]ListCommentsByTicketRow, error)
+	ListNotificationsByUser(ctx context.Context, arg ListNotificationsByUserParams) ([]Notification, error)
 	ListPublicCommentsByTicket(ctx context.Context, arg ListPublicCommentsByTicketParams) ([]ListPublicCommentsByTicketRow, error)
 	ListSLAPoliciesByTenant(ctx context.Context, tenantID int64) ([]SlaPolicy, error)
 	ListTeamMembersByTenant(ctx context.Context, tenantID int64) ([]ListTeamMembersByTenantRow, error)
@@ -42,6 +46,8 @@ type Querier interface {
 	ListTicketsByCreator(ctx context.Context, arg ListTicketsByCreatorParams) ([]Ticket, error)
 	ListTicketsByTenant(ctx context.Context, arg ListTicketsByTenantParams) ([]Ticket, error)
 	ListUsersByTenant(ctx context.Context, arg ListUsersByTenantParams) ([]User, error)
+	MarkAllNotificationsRead(ctx context.Context, arg MarkAllNotificationsReadParams) error
+	MarkNotificationRead(ctx context.Context, arg MarkNotificationReadParams) error
 	RemoveTeamMember(ctx context.Context, arg RemoveTeamMemberParams) error
 	RevokeAllUserTokens(ctx context.Context, arg RevokeAllUserTokensParams) error
 	RevokeRefreshToken(ctx context.Context, tokenHash string) error

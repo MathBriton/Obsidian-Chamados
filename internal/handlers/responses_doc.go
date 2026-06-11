@@ -30,3 +30,11 @@ type ticketEventListResponse struct {
 type slaPolicyListResponse struct {
 	Policies []slaPolicyResponse `json:"policies"`
 }
+
+type notificationListResponse struct {
+	Notifications []notificationResponse `json:"notifications"`
+}
+
+type unreadCountResponse struct {
+	Count int64 `json:"count"`
+}

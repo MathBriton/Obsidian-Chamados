@@ -169,6 +169,28 @@ definitions:
       user:
         $ref: '#/definitions/internal_handlers.userResponse'
     type: object
+  internal_handlers.notificationListResponse:
+    properties:
+      notifications:
+        items:
+          $ref: '#/definitions/internal_handlers.notificationResponse'
+        type: array
+    type: object
+  internal_handlers.notificationResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      kind:
+        type: string
+      message:
+        type: string
+      read_at:
+        type: string
+      ticket_id:
+        type: integer
+    type: object
   internal_handlers.refreshRequest:
     properties:
       refresh_token:
@@ -338,6 +360,11 @@ definitions:
       updated_at:
         type: string
     type: object
+  internal_handlers.unreadCountResponse:
+    properties:
+      count:
+        type: integer
+    type: object
   internal_handlers.updateTicketRequest:
     properties:
       assigned_team_id:
@@ -417,7 +444,7 @@ info:
     SaaS multi-tenant de gestão de chamados (help desk / service desk).
     Autenticação via Bearer JWT: obtenha o access_token em /auth/register ou /auth/login e informe-o em "Authorize".
   title: Obsidian Chamados API
-  version: 0.4.0
+  version: 0.5.0
 paths:
   /assignees:
     get:
@@ -615,6 +642,97 @@ paths:
       summary: Usuário autenticado
       tags:
       - auth
+  /notifications:
+    get:
+      parameters:
+      - description: Apenas não-lidas
+        in: query
+        name: unread
+        type: boolean
+      - description: Tamanho da página (máx. 50)
+        in: query
+        name: limit
+        type: integer
+      - description: Deslocamento
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handlers.notificationListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      security:
+      - Bearer: []
+      summary: Lista as notificações do usuário
+      tags:
+      - notifications
+  /notifications/{id}/read:
+    post:
+      parameters:
+      - description: ID da notificação
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: marcada como lida
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      security:
+      - Bearer: []
+      summary: Marca uma notificação como lida
+      tags:
+      - notifications
+  /notifications/read_all:
+    post:
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: todas marcadas como lidas
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      security:
+      - Bearer: []
+      summary: Marca todas as notificações como lidas
+      tags:
+      - notifications
+  /notifications/unread_count:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handlers.unreadCountResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      security:
+      - Bearer: []
+      summary: Contador de notificações não-lidas
+      tags:
+      - notifications
   /sla-policies:
     get:
       produces:

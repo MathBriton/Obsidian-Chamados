@@ -9,28 +9,30 @@ import "github.com/MathBriton/Obsidian-Chamados/internal/db"
 // dados — o pool de conexões ou uma transação. Construir os repositórios a
 // partir de um db.Querier permite reaproveitá-los dentro de Store.ExecTx.
 type Repositories struct {
-	Users      *UserRepository
-	Tenants    *TenantRepository
-	Tokens     *RefreshTokenRepository
-	Categories *CategoryRepository
-	Tickets    *TicketRepository
-	Comments   *CommentRepository
-	Teams      *TeamRepository
-	Events     *TicketEventRepository
-	SLA        *SLARepository
+	Users         *UserRepository
+	Tenants       *TenantRepository
+	Tokens        *RefreshTokenRepository
+	Categories    *CategoryRepository
+	Tickets       *TicketRepository
+	Comments      *CommentRepository
+	Teams         *TeamRepository
+	Events        *TicketEventRepository
+	SLA           *SLARepository
+	Notifications *NotificationRepository
 }
 
 // New monta os repositórios sobre um db.Querier (pool ou transação).
 func New(q db.Querier) *Repositories {
 	return &Repositories{
-		Users:      &UserRepository{q: q},
-		Tenants:    &TenantRepository{q: q},
-		Tokens:     &RefreshTokenRepository{q: q},
-		Categories: &CategoryRepository{q: q},
-		Tickets:    &TicketRepository{q: q},
-		Comments:   &CommentRepository{q: q},
-		Teams:      &TeamRepository{q: q},
-		Events:     &TicketEventRepository{q: q},
-		SLA:        &SLARepository{q: q},
+		Users:         &UserRepository{q: q},
+		Tenants:       &TenantRepository{q: q},
+		Tokens:        &RefreshTokenRepository{q: q},
+		Categories:    &CategoryRepository{q: q},
+		Tickets:       &TicketRepository{q: q},
+		Comments:      &CommentRepository{q: q},
+		Teams:         &TeamRepository{q: q},
+		Events:        &TicketEventRepository{q: q},
+		SLA:           &SLARepository{q: q},
+		Notifications: &NotificationRepository{q: q},
 	}
 }

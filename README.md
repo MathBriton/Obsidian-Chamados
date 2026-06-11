@@ -121,12 +121,18 @@ curl http://localhost:8080/healthz
 | `DELETE` | `/teams/:id/members/:userID` | Bearer (admin) | Desvincula um membro (idempotente) |
 | `GET` | `/sla-policies` | Bearer (staff) | Lista as políticas de SLA do tenant (por prioridade) |
 | `PUT` | `/sla-policies/:priority` | Bearer (admin) | Define os prazos de SLA de uma prioridade |
+| `GET` | `/notifications` | Bearer | Lista as notificações do usuário (`?unread=true&limit=&offset=`) |
+| `GET` | `/notifications/unread_count` | Bearer | Contador de não-lidas (badge) |
+| `POST` | `/notifications/:id/read` | Bearer | Marca uma notificação como lida (idempotente) |
+| `POST` | `/notifications/read_all` | Bearer | Marca todas as notificações como lidas |
 
 **Métricas:** `GET /stats` resume os tickets no mesmo escopo de visibilidade da listagem — staff vê o tenant inteiro, customer só os próprios. Os mapas `by_status`/`by_priority` vêm zero-preenchidos com todos os valores dos enums.
 
 **Filtros de listagem:** `GET /tickets` aceita `status`, `priority`, `assigned_to`, `team_id`, `sla` (`breached`) e `q` (busca por substring em título/descrição, case-insensitive), combináveis entre si e com a paginação. Valores fora dos enums respondem **400**. Os filtros atuam dentro do escopo de visibilidade do papel — um `customer` nunca amplia o que enxerga filtrando.
 
 **Histórico:** abertura e mudanças de status/prioridade/categoria/responsável/equipe são gravadas em `ticket_events` na mesma transação do update, com snapshots legíveis do momento do evento. `GET /tickets/:id/events` segue a visibilidade do ticket.
+
+**Notificações (in-app):** comentários **públicos** num ticket geram notificações para o criador e o responsável (menos o autor da ação), gravadas na **mesma transação** do comentário (sem worker/cron). Notas internas não notificam. Cada usuário acessa **só as próprias** (`GET /notifications`, com `?unread=true`), vê o contador do badge (`/notifications/unread_count`) e marca como lida uma (`POST /notifications/:id/read`, idempotente) ou todas (`/notifications/read_all`). Marcar notificação de outro usuário responde **404** (ADR-003). O enum de tipo já contempla `assigned`/`status_changed` para evolução futura.
 
 **SLA & prazos:** cada tenant tem uma política de SLA por prioridade (`low`/`medium`/`high`/`critical`) com dois tempos em minutos — **primeira resposta** e **resolução**. Ao abrir o ticket, os prazos (`first_response_due_at`, `resolution_due_at`) são calculados a partir da abertura; mudar a prioridade os recalcula. A **primeira resposta** é carimbada (`first_responded_at`) no primeiro comentário **público de staff** (nota interna não conta). Cada ticket expõe `sla_response_state` e `sla_resolution_state` — `none` (sem política), `ok`, `at_risk` (resta ≤20% da janela), `breached` (vencido sem cumprir) ou `met` (cumprido no prazo) —, **derivados em tempo de leitura** (sem job de varredura). O relógio corre em tempo absoluto, sem pausa em `waiting_customer` (MVP). Políticas padrão são semeadas no registro de cada tenant; `admin` ajusta em `PUT /sla-policies/:priority`. `GET /tickets?sla=breached` lista os tickets com SLA estourado.
 

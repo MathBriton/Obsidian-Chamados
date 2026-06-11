@@ -15,13 +15,14 @@ import (
 
 // Handler agrega as dependências necessárias para servir as rotas HTTP.
 type Handler struct {
-	auth       *services.AuthService
-	categories *services.CategoryService
-	tickets    *services.TicketService
-	users      *services.UserService
-	teams      *services.TeamService
-	sla        *services.SLAService
-	tokens     *auth.TokenManager
+	auth          *services.AuthService
+	categories    *services.CategoryService
+	tickets       *services.TicketService
+	users         *services.UserService
+	teams         *services.TeamService
+	sla           *services.SLAService
+	notifications *services.NotificationService
+	tokens        *auth.TokenManager
 }
 
 // New monta o Handler a partir dos serviços de aplicação.
@@ -32,16 +33,18 @@ func New(
 	userService *services.UserService,
 	teamService *services.TeamService,
 	slaService *services.SLAService,
+	notificationService *services.NotificationService,
 	tokens *auth.TokenManager,
 ) *Handler {
 	return &Handler{
-		auth:       authService,
-		categories: categoryService,
-		tickets:    ticketService,
-		users:      userService,
-		teams:      teamService,
-		sla:        slaService,
-		tokens:     tokens,
+		auth:          authService,
+		categories:    categoryService,
+		tickets:       ticketService,
+		users:         userService,
+		teams:         teamService,
+		sla:           slaService,
+		notifications: notificationService,
+		tokens:        tokens,
 	}
 }
 
@@ -92,6 +95,12 @@ func (h *Handler) Router() *gin.Engine {
 		// Políticas de SLA: staff lê; admin define os prazos por prioridade.
 		api.GET("/sla-policies", middleware.RequireRole(services.RoleAdmin, services.RoleAgent), h.ListSLAPolicies)
 		api.PUT("/sla-policies/:priority", middleware.RequireRole(services.RoleAdmin), h.UpsertSLAPolicy)
+
+		// Notificações in-app do próprio usuário.
+		api.GET("/notifications", h.ListNotifications)
+		api.GET("/notifications/unread_count", h.UnreadNotificationCount)
+		api.POST("/notifications/read_all", h.MarkAllNotificationsRead)
+		api.POST("/notifications/:id/read", h.MarkNotificationRead)
 
 		// Métricas de tickets no escopo de visibilidade do papel.
 		api.GET("/stats", h.GetStats)
