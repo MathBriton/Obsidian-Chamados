@@ -113,6 +113,7 @@ curl http://localhost:8080/healthz
 | `PATCH`| `/tickets/:id` | Bearer | Atualização parcial |
 | `POST` | `/tickets/:id/comments` | Bearer | Comenta no ticket (`is_internal` só staff) |
 | `GET`  | `/tickets/:id/comments` | Bearer | Lista comentários (customer não vê notas internas) |
+| `GET`  | `/tickets/:id/events` | Bearer | Histórico de auditoria do ticket (abertura e mudanças) |
 | `GET`  | `/stats` | Bearer | Métricas de tickets (total, por status/prioridade, ativos sem responsável) |
 | `GET`  | `/teams` | Bearer (staff) | Lista equipes do tenant com membros |
 | `POST` | `/teams` | Bearer (admin) | Cria uma equipe |
@@ -122,6 +123,8 @@ curl http://localhost:8080/healthz
 **Métricas:** `GET /stats` resume os tickets no mesmo escopo de visibilidade da listagem — staff vê o tenant inteiro, customer só os próprios. Os mapas `by_status`/`by_priority` vêm zero-preenchidos com todos os valores dos enums.
 
 **Filtros de listagem:** `GET /tickets` aceita `status`, `priority`, `assigned_to`, `team_id` e `q` (busca por substring em título/descrição, case-insensitive), combináveis entre si e com a paginação. Valores fora dos enums respondem **400**. Os filtros atuam dentro do escopo de visibilidade do papel — um `customer` nunca amplia o que enxerga filtrando.
+
+**Histórico:** abertura e mudanças de status/prioridade/categoria/responsável/equipe são gravadas em `ticket_events` na mesma transação do update, com snapshots legíveis do momento do evento. `GET /tickets/:id/events` segue a visibilidade do ticket.
 
 **Autorização (RBAC):** `customer` cria e vê/edita apenas os próprios tickets (e só `title`/`description`); `agent`/`admin` veem e editam todos do tenant, incluindo `status`, `priority`, `category_id` e `assigned_to`. Ticket de outro tenant ou de outro customer responde **404** (não revela existência — ADR-003). Transições para `resolved`/`closed` carimbam `resolved_at`/`closed_at`.
 
@@ -170,7 +173,7 @@ Testes de integração usam SQLite em memória (RNF10) — não tocam o banco re
 
 ## Frontend (`web/`)
 
-SPA em **React + TypeScript + Tailwind CSS v4**, com Vite, React Router e Vitest. Cobre autenticação (login, registro, sessão persistida e logout), listagem de chamados com filtros, busca e paginação incremental ("carregar mais"), abertura/detalhe de tickets com comentários e atribuição de responsável, dashboard de métricas (cards e distribuição por status/prioridade), além das telas de administração de usuários, categorias e equipes (admin). Staff pode atribuir chamados a um responsável e a uma equipe, e filtrar a listagem por equipe.
+SPA em **React + TypeScript + Tailwind CSS v4**, com Vite, React Router e Vitest. Cobre autenticação (login, registro, sessão persistida e logout), listagem de chamados com filtros, busca e paginação incremental ("carregar mais"), abertura/detalhe de tickets com comentários, timeline de histórico e atribuição de responsável, dashboard de métricas (cards e distribuição por status/prioridade), além das telas de administração de usuários, categorias e equipes (admin). Staff pode atribuir chamados a um responsável e a uma equipe, e filtrar a listagem por equipe.
 
 ```bash
 cd web

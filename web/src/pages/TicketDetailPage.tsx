@@ -1,7 +1,7 @@
 import { useCallback, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../auth/context'
-import { ApiError, api, type TicketPriority, type TicketStatus } from '../lib/api'
+import { ApiError, api, type TicketEvent, type TicketPriority, type TicketStatus } from '../lib/api'
 import { useAsync } from '../lib/useAsync'
 import { priorityLabels, priorityOrder, statusLabels, statusOrder } from '../lib/labels'
 import { PriorityBadge, StatusBadge } from '../components/Badge'
@@ -14,8 +14,10 @@ export function TicketDetailPage() {
 
   const loadTicket = useCallback(() => authCall((t) => api.getTicket(t, ticketId)), [authCall, ticketId])
   const loadComments = useCallback(() => authCall((t) => api.listComments(t, ticketId)), [authCall, ticketId])
+  const loadEvents = useCallback(() => authCall((t) => api.listTicketEvents(t, ticketId)), [authCall, ticketId])
   const { data: ticket, loading, error, setData: setTicket } = useAsync(loadTicket)
   const { data: comments, reload: reloadComments } = useAsync(loadComments)
+  const { data: events, reload: reloadEvents } = useAsync(loadEvents)
 
   async function patch(input: {
     status?: TicketStatus
@@ -25,6 +27,7 @@ export function TicketDetailPage() {
   }) {
     const updated = await authCall((t) => api.updateTicket(t, ticketId, input))
     setTicket(updated)
+    reloadEvents()
   }
 
   if (loading) return <p className="text-slate-500">Carregando…</p>
@@ -93,6 +96,8 @@ export function TicketDetailPage() {
         )}
       </div>
 
+      {events && events.length > 0 && <EventTimeline events={events} />}
+
       <section className="mt-8">
         <h2 className="mb-3 text-lg font-semibold text-slate-900">Comentários</h2>
 
@@ -150,6 +155,48 @@ function AssigneeSelect({ value, onChange }: { value: number | null; onChange: (
         ))}
       </select>
     </label>
+  )
+}
+
+/** Converte status/prioridade para o rótulo traduzido; outros valores (nomes
+ * de categoria/usuário/equipe) já vêm legíveis do backend. */
+function eventValue(kind: TicketEvent['kind'], value: string | null): string {
+  if (value === null) return '—'
+  if (kind === 'status_changed') return statusLabels[value as TicketStatus]?.label ?? value
+  if (kind === 'priority_changed') return priorityLabels[value as TicketPriority]?.label ?? value
+  return value
+}
+
+const eventNouns: Record<Exclude<TicketEvent['kind'], 'created'>, string> = {
+  status_changed: 'Status',
+  priority_changed: 'Prioridade',
+  category_changed: 'Categoria',
+  assignee_changed: 'Responsável',
+  team_changed: 'Equipe',
+}
+
+/** Linha do histórico: "Status: Aberto → Resolvido" etc. */
+function eventText(e: TicketEvent): string {
+  if (e.kind === 'created') return 'Chamado aberto'
+  return `${eventNouns[e.kind]}: ${eventValue(e.kind, e.old_value)} → ${eventValue(e.kind, e.new_value)}`
+}
+
+function EventTimeline({ events }: { events: TicketEvent[] }) {
+  return (
+    <section className="mt-8">
+      <h2 className="mb-3 text-lg font-semibold text-slate-900">Histórico</h2>
+      <ol className="space-y-0 border-l-2 border-slate-200 pl-4">
+        {events.map((e) => (
+          <li key={e.id} className="relative pb-3 last:pb-0">
+            <span className="absolute -left-[1.40rem] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-violet-400" />
+            <p className="text-sm text-slate-700">{eventText(e)}</p>
+            <p className="text-xs text-slate-400">
+              Usuário #{e.actor_id} · {new Date(e.created_at).toLocaleString('pt-BR')}
+            </p>
+          </li>
+        ))}
+      </ol>
+    </section>
   )
 }
 

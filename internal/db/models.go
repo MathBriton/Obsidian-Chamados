@@ -74,6 +74,17 @@ type Ticket struct {
 	ClosedAt       sql.NullTime  `json:"closed_at"`
 }
 
+type TicketEvent struct {
+	ID        int64          `json:"id"`
+	TenantID  int64          `json:"tenant_id"`
+	TicketID  int64          `json:"ticket_id"`
+	ActorID   int64          `json:"actor_id"`
+	Kind      string         `json:"kind"`
+	OldValue  sql.NullString `json:"old_value"`
+	NewValue  sql.NullString `json:"new_value"`
+	CreatedAt time.Time      `json:"created_at"`
+}
+
 type User struct {
 	ID           int64     `json:"id"`
 	TenantID     int64     `json:"tenant_id"`

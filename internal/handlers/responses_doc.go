@@ -22,3 +22,7 @@ type commentListResponse struct {
 type teamListResponse struct {
 	Teams []teamResponse `json:"teams"`
 }
+
+type ticketEventListResponse struct {
+	Events []ticketEventResponse `json:"events"`
+}

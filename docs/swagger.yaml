@@ -247,6 +247,29 @@ definitions:
       slug:
         type: string
     type: object
+  internal_handlers.ticketEventListResponse:
+    properties:
+      events:
+        items:
+          $ref: '#/definitions/internal_handlers.ticketEventResponse'
+        type: array
+    type: object
+  internal_handlers.ticketEventResponse:
+    properties:
+      actor_id:
+        type: integer
+      created_at:
+        type: string
+      id:
+        type: integer
+      kind:
+        example: status_changed
+        type: string
+      new_value:
+        type: string
+      old_value:
+        type: string
+    type: object
   internal_handlers.ticketListResponse:
     properties:
       tickets:
@@ -925,6 +948,34 @@ paths:
       summary: Comenta em um ticket
       tags:
       - comments
+  /tickets/{id}/events:
+    get:
+      parameters:
+      - description: ID do ticket
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handlers.ticketEventListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      security:
+      - Bearer: []
+      summary: Histórico de um ticket
+      tags:
+      - tickets
   /users:
     get:
       parameters:

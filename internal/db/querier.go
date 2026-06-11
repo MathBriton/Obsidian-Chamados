@@ -19,6 +19,7 @@ type Querier interface {
 	CreateTeam(ctx context.Context, arg CreateTeamParams) (Team, error)
 	CreateTenant(ctx context.Context, arg CreateTenantParams) (Tenant, error)
 	CreateTicket(ctx context.Context, arg CreateTicketParams) (Ticket, error)
+	CreateTicketEvent(ctx context.Context, arg CreateTicketEventParams) (TicketEvent, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeactivateUser(ctx context.Context, arg DeactivateUserParams) error
 	GetCategoryByID(ctx context.Context, arg GetCategoryByIDParams) (Category, error)
@@ -35,6 +36,7 @@ type Querier interface {
 	ListPublicCommentsByTicket(ctx context.Context, arg ListPublicCommentsByTicketParams) ([]Comment, error)
 	ListTeamMembersByTenant(ctx context.Context, tenantID int64) ([]ListTeamMembersByTenantRow, error)
 	ListTeamsByTenant(ctx context.Context, tenantID int64) ([]Team, error)
+	ListTicketEvents(ctx context.Context, arg ListTicketEventsParams) ([]TicketEvent, error)
 	ListTicketsByCreator(ctx context.Context, arg ListTicketsByCreatorParams) ([]Ticket, error)
 	ListTicketsByTenant(ctx context.Context, arg ListTicketsByTenantParams) ([]Ticket, error)
 	ListUsersByTenant(ctx context.Context, arg ListUsersByTenantParams) ([]User, error)

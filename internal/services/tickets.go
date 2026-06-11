@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/MathBriton/Obsidian-Chamados/internal/db"
@@ -22,6 +23,16 @@ const (
 const (
 	statusResolved = "resolved"
 	statusClosed   = "closed"
+)
+
+// Tipos de evento do histórico (auditoria) de tickets.
+const (
+	eventCreated         = "created"
+	eventStatusChanged   = "status_changed"
+	eventPriorityChanged = "priority_changed"
+	eventCategoryChanged = "category_changed"
+	eventAssigneeChanged = "assignee_changed"
+	eventTeamChanged     = "team_changed"
 )
 
 // defaultListLimit limita o tamanho de página quando o cliente não informa.
@@ -58,7 +69,8 @@ type CreateTicketInput struct {
 }
 
 // Create abre um ticket no tenant do actor, em nome dele (created_by). Qualquer
-// papel autenticado pode abrir. A categoria precisa existir no tenant.
+// papel autenticado pode abrir. A categoria precisa existir no tenant. A
+// abertura entra no histórico como evento "created".
 func (s *TicketService) Create(ctx context.Context, actor Actor, in CreateTicketInput) (db.Ticket, error) {
 	if _, err := s.store.Categories.GetByID(ctx, actor.TenantID, in.CategoryID); err != nil {
 		return db.Ticket{}, invalidCategory(err)
@@ -69,15 +81,27 @@ func (s *TicketService) Create(ctx context.Context, actor Actor, in CreateTicket
 		priority = "medium"
 	}
 
-	return s.store.Tickets.Create(ctx, repositories.CreateTicketInput{
-		TenantID:    actor.TenantID,
-		Title:       in.Title,
-		Description: in.Description,
-		Status:      "open",
-		Priority:    priority,
-		CategoryID:  in.CategoryID,
-		CreatedBy:   actor.UserID,
+	var ticket db.Ticket
+	err := s.store.ExecTx(ctx, func(r *repositories.Repositories) error {
+		var err error
+		ticket, err = r.Tickets.Create(ctx, repositories.CreateTicketInput{
+			TenantID:    actor.TenantID,
+			Title:       in.Title,
+			Description: in.Description,
+			Status:      "open",
+			Priority:    priority,
+			CategoryID:  in.CategoryID,
+			CreatedBy:   actor.UserID,
+		})
+		if err != nil {
+			return err
+		}
+		_, err = r.Events.Create(ctx, repositories.CreateEventInput{
+			TenantID: actor.TenantID, TicketID: ticket.ID, ActorID: actor.UserID, Kind: eventCreated,
+		})
+		return err
 	})
+	return ticket, err
 }
 
 // Get devolve um ticket aplicando a visibilidade do actor. Um customer que
@@ -137,7 +161,9 @@ type UpdateTicketInput struct {
 //   - agent/admin: qualquer ticket do tenant, incluindo status, prioridade,
 //     categoria e atribuição.
 //
-// Transições para "resolved"/"closed" carimbam resolved_at/closed_at.
+// Transições para "resolved"/"closed" carimbam resolved_at/closed_at. Mudanças
+// de status, prioridade, categoria, responsável e equipe entram no histórico
+// (ticket_events) na mesma transação do UPDATE, com snapshots legíveis.
 func (s *TicketService) Update(ctx context.Context, actor Actor, id int64, in UpdateTicketInput) (db.Ticket, error) {
 	ticket, err := s.Get(ctx, actor, id) // já aplica visibilidade (404 p/ alheio)
 	if err != nil {
@@ -151,39 +177,112 @@ func (s *TicketService) Update(ctx context.Context, actor Actor, id int64, in Up
 		}
 	}
 
+	var events []repositories.CreateEventInput
+	record := func(kind string, oldValue, newValue *string) {
+		events = append(events, repositories.CreateEventInput{
+			TenantID: actor.TenantID, TicketID: ticket.ID, ActorID: actor.UserID,
+			Kind: kind, OldValue: oldValue, NewValue: newValue,
+		})
+	}
+
 	if in.Title != nil {
 		ticket.Title = *in.Title
 	}
 	if in.Description != nil {
 		ticket.Description = *in.Description
 	}
-	if in.Priority != nil {
+	if in.Priority != nil && *in.Priority != ticket.Priority {
+		record(eventPriorityChanged, ptr(ticket.Priority), in.Priority)
 		ticket.Priority = *in.Priority
 	}
-	if in.CategoryID != nil {
-		if _, err := s.store.Categories.GetByID(ctx, actor.TenantID, *in.CategoryID); err != nil {
+	if in.CategoryID != nil && *in.CategoryID != ticket.CategoryID {
+		newCat, err := s.store.Categories.GetByID(ctx, actor.TenantID, *in.CategoryID)
+		if err != nil {
 			return db.Ticket{}, invalidCategory(err)
 		}
+		record(eventCategoryChanged, ptr(s.categoryName(ctx, actor.TenantID, ticket.CategoryID)), ptr(newCat.Name))
 		ticket.CategoryID = *in.CategoryID
 	}
-	if in.AssignedTo != nil {
-		if _, err := s.store.Users.GetByID(ctx, actor.TenantID, *in.AssignedTo); err != nil {
+	if in.AssignedTo != nil && (!ticket.AssignedTo.Valid || ticket.AssignedTo.Int64 != *in.AssignedTo) {
+		newUser, err := s.store.Users.GetByID(ctx, actor.TenantID, *in.AssignedTo)
+		if err != nil {
 			return db.Ticket{}, invalidAssignee(err)
 		}
+		var oldName *string
+		if ticket.AssignedTo.Valid {
+			oldName = ptr(s.userName(ctx, actor.TenantID, ticket.AssignedTo.Int64))
+		}
+		record(eventAssigneeChanged, oldName, ptr(newUser.Name))
 		ticket.AssignedTo = sql.NullInt64{Int64: *in.AssignedTo, Valid: true}
 	}
-	if in.AssignedTeamID != nil {
-		if _, err := s.store.Teams.GetByID(ctx, actor.TenantID, *in.AssignedTeamID); err != nil {
+	if in.AssignedTeamID != nil && (!ticket.AssignedTeamID.Valid || ticket.AssignedTeamID.Int64 != *in.AssignedTeamID) {
+		newTeam, err := s.store.Teams.GetByID(ctx, actor.TenantID, *in.AssignedTeamID)
+		if err != nil {
 			return db.Ticket{}, invalidTeam(err)
 		}
+		var oldName *string
+		if ticket.AssignedTeamID.Valid {
+			oldName = ptr(s.teamName(ctx, actor.TenantID, ticket.AssignedTeamID.Int64))
+		}
+		record(eventTeamChanged, oldName, ptr(newTeam.Name))
 		ticket.AssignedTeamID = sql.NullInt64{Int64: *in.AssignedTeamID, Valid: true}
 	}
-	if in.Status != nil {
+	if in.Status != nil && *in.Status != ticket.Status {
+		record(eventStatusChanged, ptr(ticket.Status), in.Status)
 		applyStatus(&ticket, *in.Status)
 	}
 
-	return s.store.Tickets.Update(ctx, ticket)
+	var updated db.Ticket
+	err = s.store.ExecTx(ctx, func(r *repositories.Repositories) error {
+		var err error
+		updated, err = r.Tickets.Update(ctx, ticket)
+		if err != nil {
+			return err
+		}
+		for _, ev := range events {
+			if _, err := r.Events.Create(ctx, ev); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return updated, err
 }
+
+// ListEvents devolve o histórico de um ticket em ordem cronológica, com a
+// mesma visibilidade do Get (customer só nos próprios; alheio responde 404).
+func (s *TicketService) ListEvents(ctx context.Context, actor Actor, ticketID int64) ([]db.TicketEvent, error) {
+	if _, err := s.Get(ctx, actor, ticketID); err != nil {
+		return nil, err
+	}
+	return s.store.Events.ListByTicket(ctx, actor.TenantID, ticketID)
+}
+
+// categoryName devolve um snapshot legível para o histórico; se a busca
+// falhar, degrada para "#id" em vez de abortar a operação.
+func (s *TicketService) categoryName(ctx context.Context, tenantID, id int64) string {
+	if cat, err := s.store.Categories.GetByID(ctx, tenantID, id); err == nil {
+		return cat.Name
+	}
+	return fmt.Sprintf("#%d", id)
+}
+
+func (s *TicketService) userName(ctx context.Context, tenantID, id int64) string {
+	if u, err := s.store.Users.GetByID(ctx, tenantID, id); err == nil {
+		return u.Name
+	}
+	return fmt.Sprintf("#%d", id)
+}
+
+func (s *TicketService) teamName(ctx context.Context, tenantID, id int64) string {
+	if t, err := s.store.Teams.GetByID(ctx, tenantID, id); err == nil {
+		return t.Name
+	}
+	return fmt.Sprintf("#%d", id)
+}
+
+// ptr devolve um ponteiro para o valor (atalho para montar eventos).
+func ptr(s string) *string { return &s }
 
 // AddComment registra um comentário num ticket. Exige que o actor enxergue o
 // ticket (customer só nos próprios, senão 404). Notas internas (is_internal)

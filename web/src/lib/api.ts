@@ -108,6 +108,25 @@ export interface Comment {
   created_at: string
 }
 
+export type TicketEventKind =
+  | 'created'
+  | 'status_changed'
+  | 'priority_changed'
+  | 'category_changed'
+  | 'assignee_changed'
+  | 'team_changed'
+
+/** Item do histórico (auditoria) do ticket. old/new são snapshots legíveis
+ * do momento do evento (enum de status/prioridade ou nome). */
+export interface TicketEvent {
+  id: number
+  kind: TicketEventKind
+  old_value: string | null
+  new_value: string | null
+  actor_id: number
+  created_at: string
+}
+
 export interface CreateTicketInput {
   title: string
   description: string
@@ -234,6 +253,9 @@ export const api = {
     request<Ticket>('/tickets', { method: 'POST', body: input, token }),
   updateTicket: (token: string, id: number, input: UpdateTicketInput) =>
     request<Ticket>(`/tickets/${id}`, { method: 'PATCH', body: input, token }),
+
+  listTicketEvents: (token: string, ticketId: number) =>
+    request<{ events: TicketEvent[] }>(`/tickets/${ticketId}/events`, { token }).then((r) => r.events),
 
   listComments: (token: string, ticketId: number) =>
     request<{ comments: Comment[] }>(`/tickets/${ticketId}/comments`, { token }).then((r) => r.comments),

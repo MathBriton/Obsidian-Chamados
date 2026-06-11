@@ -96,6 +96,9 @@ func (h *Handler) Router() *gin.Engine {
 
 		api.POST("/tickets/:id/comments", h.CreateComment)
 		api.GET("/tickets/:id/comments", h.ListComments)
+
+		// Histórico (auditoria) do ticket, na visibilidade do papel.
+		api.GET("/tickets/:id/events", h.ListTicketEvents)
 	}
 
 	return r
