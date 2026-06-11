@@ -1192,6 +1192,9 @@ const docTemplate = `{
                 "author_id": {
                     "type": "integer"
                 },
+                "author_name": {
+                    "type": "string"
+                },
                 "body": {
                     "type": "string"
                 },
@@ -1487,6 +1490,9 @@ const docTemplate = `{
             "properties": {
                 "actor_id": {
                     "type": "integer"
+                },
+                "actor_name": {
+                    "type": "string"
                 },
                 "created_at": {
                     "type": "string"

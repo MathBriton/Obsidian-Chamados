@@ -4,6 +4,8 @@ VALUES (?, ?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: ListTicketEvents :many
-SELECT * FROM ticket_events
-WHERE tenant_id = ? AND ticket_id = ?
-ORDER BY created_at, id;
+SELECT e.*, u.name AS actor_name
+FROM ticket_events e
+JOIN users u ON u.id = e.actor_id
+WHERE e.tenant_id = ? AND e.ticket_id = ?
+ORDER BY e.created_at, e.id;

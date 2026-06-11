@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/MathBriton/Obsidian-Chamados/internal/db"
+	"github.com/MathBriton/Obsidian-Chamados/internal/repositories"
 )
 
 type createCommentRequest struct {
@@ -18,16 +18,18 @@ type commentResponse struct {
 	ID         int64     `json:"id"`
 	TicketID   int64     `json:"ticket_id"`
 	AuthorID   int64     `json:"author_id"`
+	AuthorName string    `json:"author_name"`
 	Body       string    `json:"body"`
 	IsInternal bool      `json:"is_internal"`
 	CreatedAt  time.Time `json:"created_at"`
 }
 
-func toCommentResponse(c db.Comment) commentResponse {
+func toCommentResponse(c repositories.CommentWithAuthor) commentResponse {
 	return commentResponse{
 		ID:         c.ID,
 		TicketID:   c.TicketID,
 		AuthorID:   c.AuthorID,
+		AuthorName: c.AuthorName,
 		Body:       c.Body,
 		IsInternal: c.IsInternal,
 		CreatedAt:  c.CreatedAt,

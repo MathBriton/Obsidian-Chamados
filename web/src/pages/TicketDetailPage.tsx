@@ -110,7 +110,7 @@ export function TicketDetailPage() {
               }`}
             >
               <div className="mb-1 flex items-center gap-2 text-xs text-slate-400">
-                <span>Usuário #{c.author_id}</span>
+                <span className="font-medium text-slate-500">{c.author_name}</span>
                 <span>·</span>
                 <span>{new Date(c.created_at).toLocaleString('pt-BR')}</span>
                 {c.is_internal && (
@@ -191,7 +191,7 @@ function EventTimeline({ events }: { events: TicketEvent[] }) {
             <span className="absolute -left-[1.40rem] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-violet-400" />
             <p className="text-sm text-slate-700">{eventText(e)}</p>
             <p className="text-xs text-slate-400">
-              Usuário #{e.actor_id} · {new Date(e.created_at).toLocaleString('pt-BR')}
+              {e.actor_name} · {new Date(e.created_at).toLocaleString('pt-BR')}
             </p>
           </li>
         ))}

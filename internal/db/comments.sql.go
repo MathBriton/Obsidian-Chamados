@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"time"
 )
 
 const createComment = `-- name: CreateComment :one
@@ -45,9 +46,11 @@ func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (C
 }
 
 const listCommentsByTicket = `-- name: ListCommentsByTicket :many
-SELECT id, tenant_id, ticket_id, author_id, body, is_internal, created_at FROM comments
-WHERE tenant_id = ? AND ticket_id = ?
-ORDER BY created_at ASC
+SELECT c.id, c.tenant_id, c.ticket_id, c.author_id, c.body, c.is_internal, c.created_at, u.name AS author_name
+FROM comments c
+JOIN users u ON u.id = c.author_id
+WHERE c.tenant_id = ? AND c.ticket_id = ?
+ORDER BY c.created_at ASC
 `
 
 type ListCommentsByTicketParams struct {
@@ -55,15 +58,26 @@ type ListCommentsByTicketParams struct {
 	TicketID int64 `json:"ticket_id"`
 }
 
-func (q *Queries) ListCommentsByTicket(ctx context.Context, arg ListCommentsByTicketParams) ([]Comment, error) {
+type ListCommentsByTicketRow struct {
+	ID         int64     `json:"id"`
+	TenantID   int64     `json:"tenant_id"`
+	TicketID   int64     `json:"ticket_id"`
+	AuthorID   int64     `json:"author_id"`
+	Body       string    `json:"body"`
+	IsInternal bool      `json:"is_internal"`
+	CreatedAt  time.Time `json:"created_at"`
+	AuthorName string    `json:"author_name"`
+}
+
+func (q *Queries) ListCommentsByTicket(ctx context.Context, arg ListCommentsByTicketParams) ([]ListCommentsByTicketRow, error) {
 	rows, err := q.db.QueryContext(ctx, listCommentsByTicket, arg.TenantID, arg.TicketID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Comment{}
+	items := []ListCommentsByTicketRow{}
 	for rows.Next() {
-		var i Comment
+		var i ListCommentsByTicketRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.TenantID,
@@ -72,6 +86,7 @@ func (q *Queries) ListCommentsByTicket(ctx context.Context, arg ListCommentsByTi
 			&i.Body,
 			&i.IsInternal,
 			&i.CreatedAt,
+			&i.AuthorName,
 		); err != nil {
 			return nil, err
 		}
@@ -87,9 +102,11 @@ func (q *Queries) ListCommentsByTicket(ctx context.Context, arg ListCommentsByTi
 }
 
 const listPublicCommentsByTicket = `-- name: ListPublicCommentsByTicket :many
-SELECT id, tenant_id, ticket_id, author_id, body, is_internal, created_at FROM comments
-WHERE tenant_id = ? AND ticket_id = ? AND is_internal = 0
-ORDER BY created_at ASC
+SELECT c.id, c.tenant_id, c.ticket_id, c.author_id, c.body, c.is_internal, c.created_at, u.name AS author_name
+FROM comments c
+JOIN users u ON u.id = c.author_id
+WHERE c.tenant_id = ? AND c.ticket_id = ? AND c.is_internal = 0
+ORDER BY c.created_at ASC
 `
 
 type ListPublicCommentsByTicketParams struct {
@@ -97,15 +114,26 @@ type ListPublicCommentsByTicketParams struct {
 	TicketID int64 `json:"ticket_id"`
 }
 
-func (q *Queries) ListPublicCommentsByTicket(ctx context.Context, arg ListPublicCommentsByTicketParams) ([]Comment, error) {
+type ListPublicCommentsByTicketRow struct {
+	ID         int64     `json:"id"`
+	TenantID   int64     `json:"tenant_id"`
+	TicketID   int64     `json:"ticket_id"`
+	AuthorID   int64     `json:"author_id"`
+	Body       string    `json:"body"`
+	IsInternal bool      `json:"is_internal"`
+	CreatedAt  time.Time `json:"created_at"`
+	AuthorName string    `json:"author_name"`
+}
+
+func (q *Queries) ListPublicCommentsByTicket(ctx context.Context, arg ListPublicCommentsByTicketParams) ([]ListPublicCommentsByTicketRow, error) {
 	rows, err := q.db.QueryContext(ctx, listPublicCommentsByTicket, arg.TenantID, arg.TicketID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Comment{}
+	items := []ListPublicCommentsByTicketRow{}
 	for rows.Next() {
-		var i Comment
+		var i ListPublicCommentsByTicketRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.TenantID,
@@ -114,6 +142,7 @@ func (q *Queries) ListPublicCommentsByTicket(ctx context.Context, arg ListPublic
 			&i.Body,
 			&i.IsInternal,
 			&i.CreatedAt,
+			&i.AuthorName,
 		); err != nil {
 			return nil, err
 		}

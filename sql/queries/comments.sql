@@ -4,11 +4,15 @@ VALUES (?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: ListCommentsByTicket :many
-SELECT * FROM comments
-WHERE tenant_id = ? AND ticket_id = ?
-ORDER BY created_at ASC;
+SELECT c.*, u.name AS author_name
+FROM comments c
+JOIN users u ON u.id = c.author_id
+WHERE c.tenant_id = ? AND c.ticket_id = ?
+ORDER BY c.created_at ASC;
 
 -- name: ListPublicCommentsByTicket :many
-SELECT * FROM comments
-WHERE tenant_id = ? AND ticket_id = ? AND is_internal = 0
-ORDER BY created_at ASC;
+SELECT c.*, u.name AS author_name
+FROM comments c
+JOIN users u ON u.id = c.author_id
+WHERE c.tenant_id = ? AND c.ticket_id = ? AND c.is_internal = 0
+ORDER BY c.created_at ASC;

@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/MathBriton/Obsidian-Chamados/internal/db"
+	"github.com/MathBriton/Obsidian-Chamados/internal/repositories"
 )
 
 // ticketEventResponse é um item do histórico do ticket. old_value/new_value
@@ -18,14 +18,16 @@ type ticketEventResponse struct {
 	OldValue  *string   `json:"old_value"`
 	NewValue  *string   `json:"new_value"`
 	ActorID   int64     `json:"actor_id"`
+	ActorName string    `json:"actor_name"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
-func toTicketEventResponse(e db.TicketEvent) ticketEventResponse {
+func toTicketEventResponse(e repositories.EventWithActor) ticketEventResponse {
 	out := ticketEventResponse{
 		ID:        e.ID,
 		Kind:      e.Kind,
 		ActorID:   e.ActorID,
+		ActorName: e.ActorName,
 		CreatedAt: e.CreatedAt,
 	}
 	if e.OldValue.Valid {

@@ -8,6 +8,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 const createTicketEvent = `-- name: CreateTicketEvent :one
@@ -49,9 +50,11 @@ func (q *Queries) CreateTicketEvent(ctx context.Context, arg CreateTicketEventPa
 }
 
 const listTicketEvents = `-- name: ListTicketEvents :many
-SELECT id, tenant_id, ticket_id, actor_id, kind, old_value, new_value, created_at FROM ticket_events
-WHERE tenant_id = ? AND ticket_id = ?
-ORDER BY created_at, id
+SELECT e.id, e.tenant_id, e.ticket_id, e.actor_id, e.kind, e.old_value, e.new_value, e.created_at, u.name AS actor_name
+FROM ticket_events e
+JOIN users u ON u.id = e.actor_id
+WHERE e.tenant_id = ? AND e.ticket_id = ?
+ORDER BY e.created_at, e.id
 `
 
 type ListTicketEventsParams struct {
@@ -59,15 +62,27 @@ type ListTicketEventsParams struct {
 	TicketID int64 `json:"ticket_id"`
 }
 
-func (q *Queries) ListTicketEvents(ctx context.Context, arg ListTicketEventsParams) ([]TicketEvent, error) {
+type ListTicketEventsRow struct {
+	ID        int64          `json:"id"`
+	TenantID  int64          `json:"tenant_id"`
+	TicketID  int64          `json:"ticket_id"`
+	ActorID   int64          `json:"actor_id"`
+	Kind      string         `json:"kind"`
+	OldValue  sql.NullString `json:"old_value"`
+	NewValue  sql.NullString `json:"new_value"`
+	CreatedAt time.Time      `json:"created_at"`
+	ActorName string         `json:"actor_name"`
+}
+
+func (q *Queries) ListTicketEvents(ctx context.Context, arg ListTicketEventsParams) ([]ListTicketEventsRow, error) {
 	rows, err := q.db.QueryContext(ctx, listTicketEvents, arg.TenantID, arg.TicketID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []TicketEvent{}
+	items := []ListTicketEventsRow{}
 	for rows.Next() {
-		var i TicketEvent
+		var i ListTicketEventsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.TenantID,
@@ -77,6 +92,7 @@ func (q *Queries) ListTicketEvents(ctx context.Context, arg ListTicketEventsPara
 			&i.OldValue,
 			&i.NewValue,
 			&i.CreatedAt,
+			&i.ActorName,
 		); err != nil {
 			return nil, err
 		}

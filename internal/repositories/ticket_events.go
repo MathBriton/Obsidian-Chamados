@@ -36,9 +36,30 @@ func (r *TicketEventRepository) Create(ctx context.Context, in CreateEventInput)
 	})
 }
 
-// ListByTicket devolve o histórico de um ticket em ordem cronológica.
-func (r *TicketEventRepository) ListByTicket(ctx context.Context, tenantID, ticketID int64) ([]db.TicketEvent, error) {
-	return r.q.ListTicketEvents(ctx, db.ListTicketEventsParams{TenantID: tenantID, TicketID: ticketID})
+// EventWithActor anexa o nome do autor da ação (JOIN em users) ao evento.
+type EventWithActor struct {
+	db.TicketEvent
+	ActorName string
+}
+
+// ListByTicket devolve o histórico de um ticket em ordem cronológica, com o
+// nome de quem executou cada ação.
+func (r *TicketEventRepository) ListByTicket(ctx context.Context, tenantID, ticketID int64) ([]EventWithActor, error) {
+	rows, err := r.q.ListTicketEvents(ctx, db.ListTicketEventsParams{TenantID: tenantID, TicketID: ticketID})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]EventWithActor, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, EventWithActor{
+			TicketEvent: db.TicketEvent{
+				ID: row.ID, TenantID: row.TenantID, TicketID: row.TicketID, ActorID: row.ActorID,
+				Kind: row.Kind, OldValue: row.OldValue, NewValue: row.NewValue, CreatedAt: row.CreatedAt,
+			},
+			ActorName: row.ActorName,
+		})
+	}
+	return out, nil
 }
 
 func nullString(p *string) sql.NullString {

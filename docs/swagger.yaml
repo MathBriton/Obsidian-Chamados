@@ -59,6 +59,8 @@ definitions:
     properties:
       author_id:
         type: integer
+      author_name:
+        type: string
       body:
         type: string
       created_at:
@@ -258,6 +260,8 @@ definitions:
     properties:
       actor_id:
         type: integer
+      actor_name:
+        type: string
       created_at:
         type: string
       id:

@@ -251,7 +251,7 @@ func (s *TicketService) Update(ctx context.Context, actor Actor, id int64, in Up
 
 // ListEvents devolve o histórico de um ticket em ordem cronológica, com a
 // mesma visibilidade do Get (customer só nos próprios; alheio responde 404).
-func (s *TicketService) ListEvents(ctx context.Context, actor Actor, ticketID int64) ([]db.TicketEvent, error) {
+func (s *TicketService) ListEvents(ctx context.Context, actor Actor, ticketID int64) ([]repositories.EventWithActor, error) {
 	if _, err := s.Get(ctx, actor, ticketID); err != nil {
 		return nil, err
 	}
@@ -287,26 +287,30 @@ func ptr(s string) *string { return &s }
 // AddComment registra um comentário num ticket. Exige que o actor enxergue o
 // ticket (customer só nos próprios, senão 404). Notas internas (is_internal)
 // só podem ser criadas por staff; um customer que tente isso recebe 403.
-func (s *TicketService) AddComment(ctx context.Context, actor Actor, ticketID int64, body string, internal bool) (db.Comment, error) {
+func (s *TicketService) AddComment(ctx context.Context, actor Actor, ticketID int64, body string, internal bool) (repositories.CommentWithAuthor, error) {
 	if _, err := s.Get(ctx, actor, ticketID); err != nil {
-		return db.Comment{}, err
+		return repositories.CommentWithAuthor{}, err
 	}
 	if internal && !actor.isStaff() {
-		return db.Comment{}, models.ErrForbidden
+		return repositories.CommentWithAuthor{}, models.ErrForbidden
 	}
-	return s.store.Comments.Create(ctx, repositories.CreateCommentInput{
+	comment, err := s.store.Comments.Create(ctx, repositories.CreateCommentInput{
 		TenantID:   actor.TenantID,
 		TicketID:   ticketID,
 		AuthorID:   actor.UserID,
 		Body:       body,
 		IsInternal: internal,
 	})
+	if err != nil {
+		return repositories.CommentWithAuthor{}, err
+	}
+	return repositories.CommentWithAuthor{Comment: comment, AuthorName: s.userName(ctx, actor.TenantID, actor.UserID)}, nil
 }
 
 // ListComments devolve os comentários visíveis de um ticket. Exige visibilidade
 // do ticket; customers veem apenas comentários públicos, staff vê também as
 // notas internas.
-func (s *TicketService) ListComments(ctx context.Context, actor Actor, ticketID int64) ([]db.Comment, error) {
+func (s *TicketService) ListComments(ctx context.Context, actor Actor, ticketID int64) ([]repositories.CommentWithAuthor, error) {
 	if _, err := s.Get(ctx, actor, ticketID); err != nil {
 		return nil, err
 	}

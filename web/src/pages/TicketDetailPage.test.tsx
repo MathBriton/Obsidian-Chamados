@@ -37,9 +37,9 @@ const ticket = {
 }
 
 const events = [
-  { id: 1, kind: 'created', old_value: null, new_value: null, actor_id: 2, created_at: '2026-06-01T12:00:00Z' },
-  { id: 2, kind: 'assignee_changed', old_value: null, new_value: 'Ana', actor_id: 1, created_at: '2026-06-01T13:00:00Z' },
-  { id: 3, kind: 'status_changed', old_value: 'open', new_value: 'resolved', actor_id: 1, created_at: '2026-06-02T12:00:00Z' },
+  { id: 1, kind: 'created', old_value: null, new_value: null, actor_id: 2, actor_name: 'Caio', created_at: '2026-06-01T12:00:00Z' },
+  { id: 2, kind: 'assignee_changed', old_value: null, new_value: 'Ana', actor_id: 1, actor_name: 'Ana', created_at: '2026-06-01T13:00:00Z' },
+  { id: 3, kind: 'status_changed', old_value: 'open', new_value: 'resolved', actor_id: 1, actor_name: 'Ana', created_at: '2026-06-02T12:00:00Z' },
 ]
 
 function mockFetch(role = 'agent') {
@@ -83,6 +83,8 @@ describe('TicketDetailPage — histórico', () => {
     expect(screen.getByText('Responsável: — → Ana')).toBeInTheDocument()
     // Valores de status são traduzidos pelos labels.
     expect(screen.getByText('Status: Aberto → Resolvido')).toBeInTheDocument()
+    // Quem executou aparece pelo nome, não por "Usuário #id".
+    expect(screen.getByText(/Caio ·/)).toBeInTheDocument()
   })
 
   it('omite a seção quando não há eventos', async () => {

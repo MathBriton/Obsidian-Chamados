@@ -103,6 +103,7 @@ export interface Comment {
   id: number
   ticket_id: number
   author_id: number
+  author_name: string
   body: string
   is_internal: boolean
   created_at: string
@@ -124,6 +125,7 @@ export interface TicketEvent {
   old_value: string | null
   new_value: string | null
   actor_id: number
+  actor_name: string
   created_at: string
 }
 
