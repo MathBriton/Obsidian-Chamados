@@ -19,6 +19,7 @@ type Handler struct {
 	categories *services.CategoryService
 	tickets    *services.TicketService
 	users      *services.UserService
+	teams      *services.TeamService
 	tokens     *auth.TokenManager
 }
 
@@ -28,6 +29,7 @@ func New(
 	categoryService *services.CategoryService,
 	ticketService *services.TicketService,
 	userService *services.UserService,
+	teamService *services.TeamService,
 	tokens *auth.TokenManager,
 ) *Handler {
 	return &Handler{
@@ -35,6 +37,7 @@ func New(
 		categories: categoryService,
 		tickets:    ticketService,
 		users:      userService,
+		teams:      teamService,
 		tokens:     tokens,
 	}
 }
@@ -76,6 +79,12 @@ func (h *Handler) Router() *gin.Engine {
 
 		// Usuários atribuíveis (staff): admin e agent podem atribuir chamados.
 		api.GET("/assignees", middleware.RequireRole(services.RoleAdmin, services.RoleAgent), h.ListAssignees)
+
+		// Equipes: staff lista; admin cria e gere membros.
+		api.GET("/teams", middleware.RequireRole(services.RoleAdmin, services.RoleAgent), h.ListTeams)
+		api.POST("/teams", middleware.RequireRole(services.RoleAdmin), h.CreateTeam)
+		api.POST("/teams/:id/members", middleware.RequireRole(services.RoleAdmin), h.AddTeamMember)
+		api.DELETE("/teams/:id/members/:userID", middleware.RequireRole(services.RoleAdmin), h.RemoveTeamMember)
 
 		// Métricas de tickets no escopo de visibilidade do papel.
 		api.GET("/stats", h.GetStats)

@@ -9,6 +9,7 @@ import { TicketDetailPage } from './pages/TicketDetailPage'
 import { UsersPage } from './pages/UsersPage'
 import { CategoriesPage } from './pages/CategoriesPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { TeamsPage } from './pages/TeamsPage'
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="/tickets/:id" element={<TicketDetailPage />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/categories" element={<CategoriesPage />} />
+          <Route path="/teams" element={<TeamsPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

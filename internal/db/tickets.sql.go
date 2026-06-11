@@ -195,11 +195,12 @@ WHERE tenant_id = ?1 AND created_by = ?2
   AND (?3 IS NULL OR status = ?3)
   AND (?4 IS NULL OR priority = ?4)
   AND (?5 IS NULL OR assigned_to = ?5)
-  AND (?6 IS NULL
-       OR title LIKE '%' || ?6 || '%'
-       OR description LIKE '%' || ?6 || '%')
+  AND (?6 IS NULL OR assigned_team_id = ?6)
+  AND (?7 IS NULL
+       OR title LIKE '%' || ?7 || '%'
+       OR description LIKE '%' || ?7 || '%')
 ORDER BY created_at DESC, id DESC
-LIMIT ?8 OFFSET ?7
+LIMIT ?9 OFFSET ?8
 `
 
 type ListTicketsByCreatorParams struct {
@@ -208,6 +209,7 @@ type ListTicketsByCreatorParams struct {
 	Status     interface{} `json:"status"`
 	Priority   interface{} `json:"priority"`
 	AssignedTo interface{} `json:"assigned_to"`
+	TeamID     interface{} `json:"team_id"`
 	Search     interface{} `json:"search"`
 	Offset     int64       `json:"offset"`
 	Limit      int64       `json:"limit"`
@@ -220,6 +222,7 @@ func (q *Queries) ListTicketsByCreator(ctx context.Context, arg ListTicketsByCre
 		arg.Status,
 		arg.Priority,
 		arg.AssignedTo,
+		arg.TeamID,
 		arg.Search,
 		arg.Offset,
 		arg.Limit,
@@ -266,11 +269,12 @@ WHERE tenant_id = ?1
   AND (?2 IS NULL OR status = ?2)
   AND (?3 IS NULL OR priority = ?3)
   AND (?4 IS NULL OR assigned_to = ?4)
-  AND (?5 IS NULL
-       OR title LIKE '%' || ?5 || '%'
-       OR description LIKE '%' || ?5 || '%')
+  AND (?5 IS NULL OR assigned_team_id = ?5)
+  AND (?6 IS NULL
+       OR title LIKE '%' || ?6 || '%'
+       OR description LIKE '%' || ?6 || '%')
 ORDER BY created_at DESC, id DESC
-LIMIT ?7 OFFSET ?6
+LIMIT ?8 OFFSET ?7
 `
 
 type ListTicketsByTenantParams struct {
@@ -278,6 +282,7 @@ type ListTicketsByTenantParams struct {
 	Status     interface{} `json:"status"`
 	Priority   interface{} `json:"priority"`
 	AssignedTo interface{} `json:"assigned_to"`
+	TeamID     interface{} `json:"team_id"`
 	Search     interface{} `json:"search"`
 	Offset     int64       `json:"offset"`
 	Limit      int64       `json:"limit"`
@@ -289,6 +294,7 @@ func (q *Queries) ListTicketsByTenant(ctx context.Context, arg ListTicketsByTena
 		arg.Status,
 		arg.Priority,
 		arg.AssignedTo,
+		arg.TeamID,
 		arg.Search,
 		arg.Offset,
 		arg.Limit,

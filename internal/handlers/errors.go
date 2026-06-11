@@ -42,6 +42,12 @@ func respondDomainError(c *gin.Context, err error) {
 		respondError(c, http.StatusUnprocessableEntity, "invalid_category", err.Error())
 	case errors.Is(err, models.ErrInvalidAssignee):
 		respondError(c, http.StatusUnprocessableEntity, "invalid_assignee", err.Error())
+	case errors.Is(err, models.ErrTeamTaken):
+		respondError(c, http.StatusConflict, "team_taken", err.Error())
+	case errors.Is(err, models.ErrInvalidTeam):
+		respondError(c, http.StatusUnprocessableEntity, "invalid_team", err.Error())
+	case errors.Is(err, models.ErrInvalidMember):
+		respondError(c, http.StatusUnprocessableEntity, "invalid_member", err.Error())
 	case errors.Is(err, models.ErrInvalidCredentials):
 		respondError(c, http.StatusUnauthorized, "invalid_credentials", err.Error())
 	case errors.Is(err, models.ErrInvalidToken):

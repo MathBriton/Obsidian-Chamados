@@ -51,6 +51,7 @@ type TicketFilter struct {
 	Status     *string
 	Priority   *string
 	AssignedTo *int64
+	TeamID     *int64
 	Search     *string
 }
 
@@ -62,6 +63,7 @@ func (r *TicketRepository) ListByTenant(ctx context.Context, tenantID int64, f T
 		Status:     nullable(f.Status),
 		Priority:   nullable(f.Priority),
 		AssignedTo: nullable(f.AssignedTo),
+		TeamID:     nullable(f.TeamID),
 		Search:     nullable(f.Search),
 		Limit:      limit,
 		Offset:     offset,
@@ -77,6 +79,7 @@ func (r *TicketRepository) ListByCreator(ctx context.Context, tenantID, createdB
 		Status:     nullable(f.Status),
 		Priority:   nullable(f.Priority),
 		AssignedTo: nullable(f.AssignedTo),
+		TeamID:     nullable(f.TeamID),
 		Search:     nullable(f.Search),
 		Limit:      limit,
 		Offset:     offset,

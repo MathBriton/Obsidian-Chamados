@@ -36,18 +36,20 @@ type listTicketsQuery struct {
 	Status     *string `form:"status" binding:"omitempty,oneof=open in_progress waiting_customer resolved closed"`
 	Priority   *string `form:"priority" binding:"omitempty,oneof=low medium high critical"`
 	AssignedTo *int64  `form:"assigned_to" binding:"omitempty,gt=0"`
+	TeamID     *int64  `form:"team_id" binding:"omitempty,gt=0"`
 	Q          *string `form:"q"`
 }
 
 // updateTicketRequest usa ponteiros para distinguir campo ausente de valor
 // zero numa atualização parcial (PATCH).
 type updateTicketRequest struct {
-	Title       *string `json:"title" binding:"omitempty,min=1"`
-	Description *string `json:"description" binding:"omitempty,min=1"`
-	Status      *string `json:"status" binding:"omitempty,oneof=open in_progress waiting_customer resolved closed"`
-	Priority    *string `json:"priority" binding:"omitempty,oneof=low medium high critical"`
-	CategoryID  *int64  `json:"category_id" binding:"omitempty,gt=0"`
-	AssignedTo  *int64  `json:"assigned_to" binding:"omitempty,gt=0"`
+	Title          *string `json:"title" binding:"omitempty,min=1"`
+	Description    *string `json:"description" binding:"omitempty,min=1"`
+	Status         *string `json:"status" binding:"omitempty,oneof=open in_progress waiting_customer resolved closed"`
+	Priority       *string `json:"priority" binding:"omitempty,oneof=low medium high critical"`
+	CategoryID     *int64  `json:"category_id" binding:"omitempty,gt=0"`
+	AssignedTo     *int64  `json:"assigned_to" binding:"omitempty,gt=0"`
+	AssignedTeamID *int64  `json:"assigned_team_id" binding:"omitempty,gt=0"`
 }
 
 // ---------------------------------------------------------------------------
@@ -134,6 +136,7 @@ func (h *Handler) CreateTicket(c *gin.Context) {
 // @Param     status       query     string  false  "Filtra por status"     Enums(open, in_progress, waiting_customer, resolved, closed)
 // @Param     priority     query     string  false  "Filtra por prioridade" Enums(low, medium, high, critical)
 // @Param     assigned_to  query     int     false  "Filtra por responsável (id)"
+// @Param     team_id      query     int     false  "Filtra por equipe (id)"
 // @Param     q            query     string  false  "Busca por texto em título/descrição"
 // @Param     limit        query     int     false  "Tamanho da página (máx. 50)"
 // @Param     offset       query     int     false  "Deslocamento"
@@ -153,6 +156,7 @@ func (h *Handler) ListTickets(c *gin.Context) {
 		Status:     query.Status,
 		Priority:   query.Priority,
 		AssignedTo: query.AssignedTo,
+		TeamID:     query.TeamID,
 	}
 	if query.Q != nil {
 		if q := strings.TrimSpace(*query.Q); q != "" {
@@ -223,12 +227,13 @@ func (h *Handler) UpdateTicket(c *gin.Context) {
 	}
 
 	ticket, err := h.tickets.Update(c.Request.Context(), actor(c), id, services.UpdateTicketInput{
-		Title:       req.Title,
-		Description: req.Description,
-		Status:      req.Status,
-		Priority:    req.Priority,
-		CategoryID:  req.CategoryID,
-		AssignedTo:  req.AssignedTo,
+		Title:          req.Title,
+		Description:    req.Description,
+		Status:         req.Status,
+		Priority:       req.Priority,
+		CategoryID:     req.CategoryID,
+		AssignedTo:     req.AssignedTo,
+		AssignedTeamID: req.AssignedTeamID,
 	})
 	if err != nil {
 		respondDomainError(c, err)

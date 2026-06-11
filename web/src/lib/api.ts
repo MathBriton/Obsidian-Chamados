@@ -86,6 +86,19 @@ export interface Category {
   name: string
 }
 
+/** Integrante de equipe (staff ativo do tenant). */
+export interface TeamMember {
+  id: number
+  name: string
+  role: Role
+}
+
+export interface Team {
+  id: number
+  name: string
+  members: TeamMember[]
+}
+
 export interface Comment {
   id: number
   ticket_id: number
@@ -116,6 +129,7 @@ export interface TicketFilter {
   status?: TicketStatus
   priority?: TicketPriority
   assigned_to?: number
+  team_id?: number
   q?: string
   limit?: number
   offset?: number
@@ -128,6 +142,7 @@ export interface UpdateTicketInput {
   priority?: TicketPriority
   category_id?: number
   assigned_to?: number
+  assigned_team_id?: number
 }
 
 /** Erro de API com o código estável retornado pelo backend (RNF13). */
@@ -192,6 +207,13 @@ export const api = {
     request<void>(`/users/${id}`, { method: 'DELETE', token }),
   listAssignees: (token: string) =>
     request<{ users: Assignee[] }>('/assignees', { token }).then((r) => r.users),
+
+  listTeams: (token: string) => request<{ teams: Team[] }>('/teams', { token }).then((r) => r.teams),
+  createTeam: (token: string, name: string) => request<Team>('/teams', { method: 'POST', body: { name }, token }),
+  addTeamMember: (token: string, teamId: number, userId: number) =>
+    request<void>(`/teams/${teamId}/members`, { method: 'POST', body: { user_id: userId }, token }),
+  removeTeamMember: (token: string, teamId: number, userId: number) =>
+    request<void>(`/teams/${teamId}/members/${userId}`, { method: 'DELETE', token }),
 
   listCategories: (token: string) =>
     request<{ categories: Category[] }>('/categories', { token }).then((r) => r.categories),

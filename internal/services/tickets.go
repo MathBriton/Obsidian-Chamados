@@ -123,12 +123,13 @@ func (s *TicketService) Stats(ctx context.Context, actor Actor) (repositories.Ti
 // UpdateTicketInput descreve uma atualização parcial: campos nil ficam
 // inalterados. Distinguir "não informado" de "valor zero" exige ponteiros.
 type UpdateTicketInput struct {
-	Title       *string
-	Description *string
-	Status      *string
-	Priority    *string
-	CategoryID  *int64
-	AssignedTo  *int64
+	Title          *string
+	Description    *string
+	Status         *string
+	Priority       *string
+	CategoryID     *int64
+	AssignedTo     *int64
+	AssignedTeamID *int64
 }
 
 // Update aplica uma atualização parcial respeitando o RBAC:
@@ -145,7 +146,7 @@ func (s *TicketService) Update(ctx context.Context, actor Actor, id int64, in Up
 
 	if !actor.isStaff() {
 		// Customer não pode mexer em status, prioridade, categoria ou atribuição.
-		if in.Status != nil || in.Priority != nil || in.CategoryID != nil || in.AssignedTo != nil {
+		if in.Status != nil || in.Priority != nil || in.CategoryID != nil || in.AssignedTo != nil || in.AssignedTeamID != nil {
 			return db.Ticket{}, models.ErrForbidden
 		}
 	}
@@ -170,6 +171,12 @@ func (s *TicketService) Update(ctx context.Context, actor Actor, id int64, in Up
 			return db.Ticket{}, invalidAssignee(err)
 		}
 		ticket.AssignedTo = sql.NullInt64{Int64: *in.AssignedTo, Valid: true}
+	}
+	if in.AssignedTeamID != nil {
+		if _, err := s.store.Teams.GetByID(ctx, actor.TenantID, *in.AssignedTeamID); err != nil {
+			return db.Ticket{}, invalidTeam(err)
+		}
+		ticket.AssignedTeamID = sql.NullInt64{Int64: *in.AssignedTeamID, Valid: true}
 	}
 	if in.Status != nil {
 		applyStatus(&ticket, *in.Status)
@@ -237,6 +244,14 @@ func invalidCategory(err error) error {
 func invalidAssignee(err error) error {
 	if errors.Is(err, models.ErrNotFound) {
 		return models.ErrInvalidAssignee
+	}
+	return err
+}
+
+// invalidTeam converte um ErrNotFound da equipe em ErrInvalidTeam.
+func invalidTeam(err error) error {
+	if errors.Is(err, models.ErrNotFound) {
+		return models.ErrInvalidTeam
 	}
 	return err
 }

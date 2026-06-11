@@ -9,18 +9,21 @@ import (
 )
 
 type Querier interface {
+	AddTeamMember(ctx context.Context, arg AddTeamMemberParams) error
 	CountTicketsByPriority(ctx context.Context, arg CountTicketsByPriorityParams) ([]CountTicketsByPriorityRow, error)
 	CountTicketsByStatus(ctx context.Context, arg CountTicketsByStatusParams) ([]CountTicketsByStatusRow, error)
 	CountUnassignedActiveTickets(ctx context.Context, arg CountUnassignedActiveTicketsParams) (int64, error)
 	CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error)
 	CreateComment(ctx context.Context, arg CreateCommentParams) (Comment, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
+	CreateTeam(ctx context.Context, arg CreateTeamParams) (Team, error)
 	CreateTenant(ctx context.Context, arg CreateTenantParams) (Tenant, error)
 	CreateTicket(ctx context.Context, arg CreateTicketParams) (Ticket, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeactivateUser(ctx context.Context, arg DeactivateUserParams) error
 	GetCategoryByID(ctx context.Context, arg GetCategoryByIDParams) (Category, error)
 	GetRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
+	GetTeamByID(ctx context.Context, arg GetTeamByIDParams) (Team, error)
 	GetTenantByID(ctx context.Context, id int64) (Tenant, error)
 	GetTenantBySlug(ctx context.Context, slug string) (Tenant, error)
 	GetTicketByID(ctx context.Context, arg GetTicketByIDParams) (Ticket, error)
@@ -30,9 +33,12 @@ type Querier interface {
 	ListCategoriesByTenant(ctx context.Context, tenantID int64) ([]Category, error)
 	ListCommentsByTicket(ctx context.Context, arg ListCommentsByTicketParams) ([]Comment, error)
 	ListPublicCommentsByTicket(ctx context.Context, arg ListPublicCommentsByTicketParams) ([]Comment, error)
+	ListTeamMembersByTenant(ctx context.Context, tenantID int64) ([]ListTeamMembersByTenantRow, error)
+	ListTeamsByTenant(ctx context.Context, tenantID int64) ([]Team, error)
 	ListTicketsByCreator(ctx context.Context, arg ListTicketsByCreatorParams) ([]Ticket, error)
 	ListTicketsByTenant(ctx context.Context, arg ListTicketsByTenantParams) ([]Ticket, error)
 	ListUsersByTenant(ctx context.Context, arg ListUsersByTenantParams) ([]User, error)
+	RemoveTeamMember(ctx context.Context, arg RemoveTeamMemberParams) error
 	RevokeAllUserTokens(ctx context.Context, arg RevokeAllUserTokensParams) error
 	RevokeRefreshToken(ctx context.Context, tokenHash string) error
 	UpdateTicket(ctx context.Context, arg UpdateTicketParams) (Ticket, error)

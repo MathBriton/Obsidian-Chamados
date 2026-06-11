@@ -1,5 +1,12 @@
 basePath: /
 definitions:
+  internal_handlers.addTeamMemberRequest:
+    properties:
+      user_id:
+        type: integer
+    required:
+    - user_id
+    type: object
   internal_handlers.assignableListResponse:
     properties:
       users:
@@ -79,6 +86,13 @@ definitions:
         type: boolean
     required:
     - body
+    type: object
+  internal_handlers.createTeamRequest:
+    properties:
+      name:
+        type: string
+    required:
+    - name
     type: object
   internal_handlers.createTicketRequest:
     properties:
@@ -197,6 +211,33 @@ definitions:
       unassigned_active:
         type: integer
     type: object
+  internal_handlers.teamListResponse:
+    properties:
+      teams:
+        items:
+          $ref: '#/definitions/internal_handlers.teamResponse'
+        type: array
+    type: object
+  internal_handlers.teamMemberResponse:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+      role:
+        type: string
+    type: object
+  internal_handlers.teamResponse:
+    properties:
+      id:
+        type: integer
+      members:
+        items:
+          $ref: '#/definitions/internal_handlers.teamMemberResponse'
+        type: array
+      name:
+        type: string
+    type: object
   internal_handlers.tenantResponse:
     properties:
       id:
@@ -244,6 +285,8 @@ definitions:
     type: object
   internal_handlers.updateTicketRequest:
     properties:
+      assigned_team_id:
+        type: integer
       assigned_to:
         type: integer
       category_id:
@@ -525,6 +568,139 @@ paths:
       summary: Métricas de tickets (escopo do papel)
       tags:
       - tickets
+  /teams:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handlers.teamListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      security:
+      - Bearer: []
+      summary: Lista as equipes do tenant com membros (staff)
+      tags:
+      - teams
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Nome da equipe
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.createTeamRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_handlers.teamResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      security:
+      - Bearer: []
+      summary: Cria uma equipe (admin)
+      tags:
+      - teams
+  /teams/{id}/members:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID da equipe
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Usuário a vincular
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.addTeamMemberRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: membro vinculado
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      security:
+      - Bearer: []
+      summary: Adiciona um membro à equipe (admin)
+      tags:
+      - teams
+  /teams/{id}/members/{userID}:
+    delete:
+      parameters:
+      - description: ID da equipe
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ID do usuário
+        in: path
+        name: userID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: membro desvinculado
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_handlers.errorEnvelope'
+      security:
+      - Bearer: []
+      summary: Remove um membro da equipe (admin)
+      tags:
+      - teams
   /tickets:
     get:
       parameters:
@@ -550,6 +726,10 @@ paths:
       - description: Filtra por responsável (id)
         in: query
         name: assigned_to
+        type: integer
+      - description: Filtra por equipe (id)
+        in: query
+        name: team_id
         type: integer
       - description: Busca por texto em título/descrição
         in: query

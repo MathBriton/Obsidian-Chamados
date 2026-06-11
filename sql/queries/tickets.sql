@@ -14,6 +14,7 @@ WHERE tenant_id = sqlc.arg('tenant_id')
   AND (sqlc.narg('status') IS NULL OR status = sqlc.narg('status'))
   AND (sqlc.narg('priority') IS NULL OR priority = sqlc.narg('priority'))
   AND (sqlc.narg('assigned_to') IS NULL OR assigned_to = sqlc.narg('assigned_to'))
+  AND (sqlc.narg('team_id') IS NULL OR assigned_team_id = sqlc.narg('team_id'))
   AND (sqlc.narg('search') IS NULL
        OR title LIKE '%' || sqlc.narg('search') || '%'
        OR description LIKE '%' || sqlc.narg('search') || '%')
@@ -26,6 +27,7 @@ WHERE tenant_id = sqlc.arg('tenant_id') AND created_by = sqlc.arg('created_by')
   AND (sqlc.narg('status') IS NULL OR status = sqlc.narg('status'))
   AND (sqlc.narg('priority') IS NULL OR priority = sqlc.narg('priority'))
   AND (sqlc.narg('assigned_to') IS NULL OR assigned_to = sqlc.narg('assigned_to'))
+  AND (sqlc.narg('team_id') IS NULL OR assigned_team_id = sqlc.narg('team_id'))
   AND (sqlc.narg('search') IS NULL
        OR title LIKE '%' || sqlc.narg('search') || '%'
        OR description LIKE '%' || sqlc.narg('search') || '%')

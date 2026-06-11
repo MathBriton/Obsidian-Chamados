@@ -42,6 +42,11 @@ export function Layout() {
                   Categorias
                 </NavLink>
               )}
+              {isAdmin && (
+                <NavLink to="/teams" className={navClass}>
+                  Equipes
+                </NavLink>
+              )}
             </nav>
           </div>
           <div className="flex items-center gap-4">

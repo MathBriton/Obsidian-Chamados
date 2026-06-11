@@ -16,4 +16,7 @@ var (
 	ErrCategoryTaken      = errors.New("categoria já existe")
 	ErrInvalidCategory    = errors.New("categoria inválida")
 	ErrInvalidAssignee    = errors.New("responsável inválido")
+	ErrTeamTaken          = errors.New("equipe já existe")
+	ErrInvalidTeam        = errors.New("equipe inválida")
+	ErrInvalidMember      = errors.New("membro inválido")
 )

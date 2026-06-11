@@ -13,11 +13,20 @@ const SEARCH_DEBOUNCE_MS = 300
 const PAGE_SIZE = 20
 
 export function TicketsPage() {
-  const { authCall } = useAuth()
+  const { authCall, user } = useAuth()
+  const isStaff = user?.role === 'admin' || user?.role === 'agent'
   const [status, setStatus] = useState<TicketStatus | ''>('')
   const [priority, setPriority] = useState<TicketPriority | ''>('')
+  const [teamId, setTeamId] = useState('')
   const [search, setSearch] = useState('')
   const [q, setQ] = useState('')
+
+  // Equipes existem só para staff (a rota é 403 para customer).
+  const loadTeams = useCallback(
+    () => (isStaff ? authCall((t) => api.listTeams(t)) : Promise.resolve([])),
+    [authCall, isStaff],
+  )
+  const { data: teams } = useAsync(loadTeams)
 
   // exhausted marca que o servidor devolveu uma página incompleta (fim da
   // lista); loadingMore/moreError são o estado do "Carregar mais".
@@ -37,12 +46,13 @@ export function TicketsPage() {
       api.listTickets(t, {
         status: status || undefined,
         priority: priority || undefined,
+        team_id: teamId ? Number(teamId) : undefined,
         q: q || undefined,
         limit: PAGE_SIZE,
         offset: 0,
       }),
     )
-  }, [authCall, status, priority, q])
+  }, [authCall, status, priority, teamId, q])
   const { data: tickets, loading, error, setData } = useAsync(loader)
 
   // Página cheia sugere que há mais; uma incompleta encerra a paginação. No
@@ -59,6 +69,7 @@ export function TicketsPage() {
         api.listTickets(t, {
           status: status || undefined,
           priority: priority || undefined,
+          team_id: teamId ? Number(teamId) : undefined,
           q: q || undefined,
           limit: PAGE_SIZE,
           offset: tickets.length,
@@ -73,7 +84,7 @@ export function TicketsPage() {
     }
   }
 
-  const hasFilter = status !== '' || priority !== '' || q !== ''
+  const hasFilter = status !== '' || priority !== '' || teamId !== '' || q !== ''
 
   return (
     <div>
@@ -122,6 +133,21 @@ export function TicketsPage() {
             </option>
           ))}
         </select>
+        {isStaff && teams && teams.length > 0 && (
+          <select
+            value={teamId}
+            onChange={(e) => setTeamId(e.target.value)}
+            aria-label="Filtrar por equipe"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-200"
+          >
+            <option value="">Todas as equipes</option>
+            {teams.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {loading && <p className="text-slate-500">Carregando chamados…</p>}

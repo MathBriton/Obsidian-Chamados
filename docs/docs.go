@@ -357,6 +357,217 @@ const docTemplate = `{
                 }
             }
         },
+        "/teams": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "teams"
+                ],
+                "summary": "Lista as equipes do tenant com membros (staff)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.teamListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.errorEnvelope"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.errorEnvelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "teams"
+                ],
+                "summary": "Cria uma equipe (admin)",
+                "parameters": [
+                    {
+                        "description": "Nome da equipe",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.createTeamRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.teamResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.errorEnvelope"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.errorEnvelope"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.errorEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/teams/{id}/members": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "teams"
+                ],
+                "summary": "Adiciona um membro à equipe (admin)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da equipe",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Usuário a vincular",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.addTeamMemberRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "membro vinculado"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.errorEnvelope"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.errorEnvelope"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.errorEnvelope"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.errorEnvelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/teams/{id}/members/{userID}": {
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "teams"
+                ],
+                "summary": "Remove um membro da equipe (admin)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da equipe",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ID do usuário",
+                        "name": "userID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "membro desvinculado"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.errorEnvelope"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.errorEnvelope"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.errorEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/tickets": {
             "get": {
                 "security": [
@@ -401,6 +612,12 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Filtra por responsável (id)",
                         "name": "assigned_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filtra por equipe (id)",
+                        "name": "team_id",
                         "in": "query"
                     },
                     {
@@ -838,6 +1055,17 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "internal_handlers.addTeamMemberRequest": {
+            "type": "object",
+            "required": [
+                "user_id"
+            ],
+            "properties": {
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
         "internal_handlers.assignableListResponse": {
             "type": "object",
             "properties": {
@@ -959,6 +1187,17 @@ const docTemplate = `{
                 },
                 "is_internal": {
                     "type": "boolean"
+                }
+            }
+        },
+        "internal_handlers.createTeamRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string"
                 }
             }
         },
@@ -1131,6 +1370,48 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_handlers.teamListResponse": {
+            "type": "object",
+            "properties": {
+                "teams": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_handlers.teamResponse"
+                    }
+                }
+            }
+        },
+        "internal_handlers.teamMemberResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handlers.teamResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "members": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_handlers.teamMemberResponse"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_handlers.tenantResponse": {
             "type": "object",
             "properties": {
@@ -1203,6 +1484,9 @@ const docTemplate = `{
         "internal_handlers.updateTicketRequest": {
             "type": "object",
             "properties": {
+                "assigned_team_id": {
+                    "type": "integer"
+                },
                 "assigned_to": {
                     "type": "integer"
                 },
