@@ -213,10 +213,11 @@ WHERE tenant_id = ?1 AND created_by = ?2
        OR title LIKE '%' || ?7 || '%'
        OR description LIKE '%' || ?7 || '%')
   AND (?8 IS NULL OR (
-        (resolution_due_at IS NOT NULL AND resolved_at IS NULL
-         AND resolution_due_at < ?8)
-     OR (first_response_due_at IS NOT NULL AND first_responded_at IS NULL
-         AND first_response_due_at < ?8)))
+        resolved_at IS NULL AND closed_at IS NULL AND (
+            (resolution_due_at IS NOT NULL
+             AND resolution_due_at < ?8)
+         OR (first_response_due_at IS NOT NULL AND first_responded_at IS NULL
+             AND first_response_due_at < ?8))))
 ORDER BY created_at DESC, id DESC
 LIMIT ?10 OFFSET ?9
 `
@@ -297,10 +298,11 @@ WHERE tenant_id = ?1
        OR title LIKE '%' || ?6 || '%'
        OR description LIKE '%' || ?6 || '%')
   AND (?7 IS NULL OR (
-        (resolution_due_at IS NOT NULL AND resolved_at IS NULL
-         AND resolution_due_at < ?7)
-     OR (first_response_due_at IS NOT NULL AND first_responded_at IS NULL
-         AND first_response_due_at < ?7)))
+        resolved_at IS NULL AND closed_at IS NULL AND (
+            (resolution_due_at IS NOT NULL
+             AND resolution_due_at < ?7)
+         OR (first_response_due_at IS NOT NULL AND first_responded_at IS NULL
+             AND first_response_due_at < ?7))))
 ORDER BY created_at DESC, id DESC
 LIMIT ?9 OFFSET ?8
 `

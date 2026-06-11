@@ -22,10 +22,11 @@ WHERE tenant_id = sqlc.arg('tenant_id')
        OR title LIKE '%' || sqlc.narg('search') || '%'
        OR description LIKE '%' || sqlc.narg('search') || '%')
   AND (sqlc.narg('breached_before') IS NULL OR (
-        (resolution_due_at IS NOT NULL AND resolved_at IS NULL
-         AND resolution_due_at < sqlc.narg('breached_before'))
-     OR (first_response_due_at IS NOT NULL AND first_responded_at IS NULL
-         AND first_response_due_at < sqlc.narg('breached_before'))))
+        resolved_at IS NULL AND closed_at IS NULL AND (
+            (resolution_due_at IS NOT NULL
+             AND resolution_due_at < sqlc.narg('breached_before'))
+         OR (first_response_due_at IS NOT NULL AND first_responded_at IS NULL
+             AND first_response_due_at < sqlc.narg('breached_before')))))
 ORDER BY created_at DESC, id DESC
 LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
 
@@ -40,10 +41,11 @@ WHERE tenant_id = sqlc.arg('tenant_id') AND created_by = sqlc.arg('created_by')
        OR title LIKE '%' || sqlc.narg('search') || '%'
        OR description LIKE '%' || sqlc.narg('search') || '%')
   AND (sqlc.narg('breached_before') IS NULL OR (
-        (resolution_due_at IS NOT NULL AND resolved_at IS NULL
-         AND resolution_due_at < sqlc.narg('breached_before'))
-     OR (first_response_due_at IS NOT NULL AND first_responded_at IS NULL
-         AND first_response_due_at < sqlc.narg('breached_before'))))
+        resolved_at IS NULL AND closed_at IS NULL AND (
+            (resolution_due_at IS NOT NULL
+             AND resolution_due_at < sqlc.narg('breached_before'))
+         OR (first_response_due_at IS NOT NULL AND first_responded_at IS NULL
+             AND first_response_due_at < sqlc.narg('breached_before')))))
 ORDER BY created_at DESC, id DESC
 LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
 

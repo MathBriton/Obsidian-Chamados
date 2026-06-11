@@ -134,3 +134,28 @@ func TestCreateTicket_ResponseIncludesSLA(t *testing.T) {
 		t.Fatalf("sla_resolution_state %v, esperado ok", body["sla_resolution_state"])
 	}
 }
+
+func TestTicket_ClosedWithoutResolveCountsAsMet(t *testing.T) {
+	e := newEnv(t)
+	tn := e.seedTenant(t, "Acme", "acme")
+	e.seedSLA(t, tn.ID, "medium", 60, 480)
+	cat := e.seedCategory(t, tn.ID, "Bugs")
+	admin := e.seedUser(t, tn.ID, "admin@acme.com", services.RoleAdmin)
+	tok := e.token(t, admin)
+
+	id := e.createTicket(t, tok, cat.ID, "Duplicado")
+	// Fecha direto, sem passar por "resolved" (resolved_at fica nulo).
+	w := do(t, e.r, http.MethodPatch, "/tickets/"+strconv.FormatInt(id, 10),
+		`{"status":"closed"}`, tok)
+	if w.Code != http.StatusOK {
+		t.Fatalf("PATCH status %d, esperado 200; body=%s", w.Code, w.Body.String())
+	}
+	body := decode(t, w)
+	// Fechado antes do prazo de resolução => SLA de resolução cumprido.
+	if body["resolved_at"] != nil {
+		t.Fatalf("resolved_at deveria ser nulo, obtido %v", body["resolved_at"])
+	}
+	if body["sla_resolution_state"] != services.SLAStateMet {
+		t.Fatalf("sla_resolution_state %v, esperado met (fechado dentro do prazo)", body["sla_resolution_state"])
+	}
+}

@@ -80,6 +80,13 @@ type ticketResponse struct {
 
 func toTicketResponse(t db.Ticket) ticketResponse {
 	now := time.Now().UTC()
+	// O relógio de resolução para ao concluir: um ticket fechado direto (sem
+	// passar por "resolved") tem closed_at, mas não resolved_at — closed_at
+	// conta como conclusão para o estado do SLA.
+	resolutionDone := t.ResolvedAt
+	if !resolutionDone.Valid {
+		resolutionDone = t.ClosedAt
+	}
 	return ticketResponse{
 		ID:                 t.ID,
 		Title:              t.Title,
@@ -98,7 +105,7 @@ func toTicketResponse(t db.Ticket) ticketResponse {
 		ResolutionDueAt:    nullTime(t.ResolutionDueAt),
 		FirstRespondedAt:   nullTime(t.FirstRespondedAt),
 		SLAResponseState:   services.SLAState(t.FirstResponseDueAt, t.FirstRespondedAt, t.CreatedAt, now),
-		SLAResolutionState: services.SLAState(t.ResolutionDueAt, t.ResolvedAt, t.CreatedAt, now),
+		SLAResolutionState: services.SLAState(t.ResolutionDueAt, resolutionDone, t.CreatedAt, now),
 	}
 }
 

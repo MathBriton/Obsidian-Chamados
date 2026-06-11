@@ -210,12 +210,27 @@ func TestListTickets_BreachedFilter(t *testing.T) {
 		t.Fatalf("create ok: %v", err)
 	}
 
+	// Ticket estourado MAS terminal (fechado): o relógio parou, não deve
+	// poluir a fila de breach.
+	closed, err := e.store.Tickets.Create(ctx, repositories.CreateTicketInput{
+		TenantID: e.admin.TenantID, Title: "fechado", Description: "d", Status: "closed", Priority: "high",
+		CategoryID: e.category, CreatedBy: e.admin.UserID,
+		ResolutionDueAt: sql.NullTime{Time: now.Add(-time.Hour), Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("create closed: %v", err)
+	}
+	closed.ClosedAt = sql.NullTime{Time: now.Add(-30 * time.Minute), Valid: true}
+	if _, err := e.store.Tickets.Update(ctx, closed); err != nil {
+		t.Fatalf("stamp closed_at: %v", err)
+	}
+
 	got, err := e.store.Tickets.ListByTenant(ctx, e.admin.TenantID,
 		repositories.TicketFilter{BreachedBefore: &now}, 50, 0)
 	if err != nil {
 		t.Fatalf("ListByTenant: %v", err)
 	}
 	if len(got) != 1 || got[0].ID != breached.ID {
-		t.Fatalf("filtro breached deveria retornar só o ticket estourado, obtido %d itens", len(got))
+		t.Fatalf("filtro breached deveria retornar só o ticket estourado e aberto, obtido %d itens", len(got))
 	}
 }
