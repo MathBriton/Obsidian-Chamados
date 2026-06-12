@@ -72,6 +72,11 @@ yarn-error.log*
 pnpm-debug.log*
 
 # ========================
+# Ferramentas de diagnóstico / scratch local (não versionar)
+# ========================
+/cmd/dbcheck/
+
+# ========================
 # Tests / Coverage
 # ========================
 coverage/
